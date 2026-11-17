@@ -52,3 +52,6 @@ The Prisma schema is the data model, not a substitute for migrations. Do not dep
 ## Current implementation status
 
 Core domain libraries and unit tests exist. Database bootstrap, user-facing workflows, tenant-scoped APIs, email delivery, payment integrations, AI workflows and production deployment are still being implemented in stages. A green unit-test run alone does not certify production readiness.
+
+## Recent implementation
+- Invoice drafts can be edited before issuance; issued documents remain locked from this editor.
