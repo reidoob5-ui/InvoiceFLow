@@ -48,7 +48,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (body.active !== undefined) data.active = body.active === true;
   if (body.isDefault !== undefined) data.isDefault = body.isDefault === true;
 
-  const wantsDefault = data.isDefault === true && data.active !== false && data.exempt !== true && !existing.exempt;
+  const resultingExempt = data.exempt ?? existing.exempt;
+  const wantsDefault = data.isDefault === true && data.active !== false && !resultingExempt;
   if (data.exempt === true || data.active === false) data.isDefault = false;
   const tax = await prisma.$transaction(async (tx) => {
     if (wantsDefault) await tx.taxRate.updateMany({ where: { organizationId, id: { not: id } }, data: { isDefault: false } });
