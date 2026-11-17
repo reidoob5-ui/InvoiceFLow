@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       data: {
         name: organizationName,
         slug: makeSlug(organizationName),
-        memberships: { create: { userId: created.id, role: "OWNER" } },
+        memberships: { create: { user: { connect: { id: created.id } }, role: "OWNER" } },
       },
     });
     return created;
