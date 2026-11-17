@@ -11,8 +11,9 @@ export default async function Home() {
   if (!current) redirect("/login");
   if (!current.membership) redirect("/onboarding");
 
-  const organizationId = current.membership.organizationId;
-  const currency = current.membership.organization.currency || "USD";
+  const membership = current.membership;
+  const organizationId = membership.organizationId;
+  const currency = membership.organization.currency || "USD";
   const [totals, clientCount, paidCount, recentInvoices, sixMonthInvoices] = await Promise.all([
     prisma.invoice.aggregate({
       where: { organizationId, status: { not: "VOID" } },
@@ -56,6 +57,7 @@ export default async function Home() {
           <a className="flex items-center gap-3 rounded-xl bg-indigo-500/15 px-4 py-3 font-medium text-indigo-200" href="/">Visão geral</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/invoices">Facturas</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/clients">Clientes</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/products">Produtos e serviços</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/expenses">Despesas</a>
         </nav>
         <div className="mt-auto rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4"><div className="mb-2 text-sm font-semibold">{current.membership.organization.name}</div><p className="text-xs leading-5 text-slate-400">{current.user.email}</p><form action="/api/auth/logout" method="post" className="mt-4"><button className="text-xs text-indigo-300 hover:text-indigo-200">Terminar sessão</button></form></div>
@@ -68,7 +70,7 @@ export default async function Home() {
         </div>
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
           <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">Facturação recente</h3><p className="mt-1 text-xs text-slate-500">Total de documentos criados nos últimos seis meses</p><div className="mt-8 flex h-48 items-end gap-3">{months.map((month)=><div key={month.key} className="flex h-full flex-1 flex-col justify-end"><div title={money(month.amount,currency)} className="w-full rounded-t-md bg-gradient-to-t from-indigo-600/60 to-indigo-400" style={{height:`${Math.max(3,month.amount/maxMonth*100)}%`}}/><span className="mt-3 text-center text-[10px] text-slate-500">{month.label}</span></div>)}</div></div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">A tua empresa</h3><p className="mt-1 text-xs text-slate-500">Espaço de trabalho activo</p><div className="mt-6"><div className="text-xl font-semibold">{current.membership.organization.name}</div><div className="mt-2 text-sm text-slate-400">{current.membership.role}</div><div className="mt-4 rounded-xl border border-white/10 p-3 text-xs text-slate-500">Moeda principal: {currency}</div></div></div>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">A tua empresa</h3><p className="mt-1 text-xs text-slate-500">Espaço de trabalho activo</p><div className="mt-6"><div className="text-xl font-semibold">{current.membership.organization.name}</div><div className="mt-2 text-sm text-slate-400">{membership.role}</div><div className="mt-4 rounded-xl border border-white/10 p-3 text-xs text-slate-500">Moeda principal: {currency}</div></div></div>
         </div>
         <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65"><div className="border-b border-white/10 p-5"><h3 className="font-semibold">Facturas recentes</h3><p className="mt-1 text-xs text-slate-500">Os últimos documentos da empresa</p></div>
           {recentInvoices.length===0?<div className="p-8 text-center"><p className="font-medium">Ainda não existem facturas</p><p className="mt-2 text-sm text-slate-500">Quando criares documentos, eles aparecerão aqui.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-sm"><thead className="bg-white/[.02] text-xs text-slate-500"><tr><th className="px-5 py-3 font-medium">Documento</th><th className="px-5 py-3 font-medium">Cliente</th><th className="px-5 py-3 font-medium">Data</th><th className="px-5 py-3 font-medium">Total</th><th className="px-5 py-3 font-medium">Estado</th></tr></thead><tbody>{recentInvoices.map((invoice)=><tr key={invoice.id} className="border-t border-white/[.06]"><td className="px-5 py-4 font-medium text-slate-200">{invoice.number || "Rascunho"}</td><td className="px-5 py-4 text-slate-400">{invoice.client.name}</td><td className="px-5 py-4 text-slate-500">{new Intl.DateTimeFormat("pt-PT").format(invoice.createdAt)}</td><td className="px-5 py-4 font-medium">{money(Number(invoice.total),invoice.currency || currency)}</td><td className="px-5 py-4 text-slate-300">{statusLabel[invoice.status] || invoice.status}</td></tr>)}</tbody></table></div>}
