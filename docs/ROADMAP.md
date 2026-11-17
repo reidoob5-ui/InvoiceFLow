@@ -1,4 +1,13 @@
-# InvoiceFlow — Development roadmap
+# InvoiceFlow — Product requirements and development roadmap
+
+## Product requirements (approved)
+
+- Product scope: COMPLETE — implement the full business-finance platform, not only invoicing.
+- AI: INTEGRATED — AI assistant, document OCR, expense classification, anomaly detection and cash-flow forecasting.
+- Platforms: ALL — responsive web, Android and iOS, with desktop/tablet support.
+- Business model: multi-tenant SaaS plus dedicated single-tenant deployments.
+- Market: global, with localization, currencies and country-specific tax configuration.
+- UX: premium, accessible, responsive and multilingual.
 
 ## Stage 1 — Foundation
 - [x] Next.js / TypeScript application scaffold
@@ -7,12 +16,19 @@
 - [ ] Install, compile and validate in the development environment
 
 ## Stage 2 — Identity and organizations
-- [ ] Registration, login, logout and password reset
-- [ ] Secure password hashing and session handling
-- [ ] User profiles
-- [ ] Organization creation and onboarding
-- [ ] Membership and roles: owner, admin, member
-- [ ] Server-side tenant isolation on every protected query
+- [x] Registration API with input validation
+- [x] Password hashing with bcrypt
+- [x] Random opaque sessions, hashed at rest, HttpOnly cookie
+- [x] Login, logout and current-user endpoints
+- [x] Registration and login screens
+- [x] Create first organization with OWNER membership
+- [x] List organizations for authenticated user
+- [x] Create additional organizations for authenticated user
+- [x] Membership relation and OWNER / ADMIN / MEMBER roles
+- [ ] Password reset and email verification
+- [ ] Invitations and role-management interface
+- [ ] Rate limiting, abuse protection and security tests
+- [ ] Enforce tenant authorization in every business API (required before those APIs ship)
 - [ ] Single-tenant bootstrap configuration
 
 ## Stage 3 — Business directory
@@ -41,16 +57,25 @@
 - [ ] Country-specific tax configuration
 - [ ] CSV exports and reports
 
-## Stage 7 — SaaS operations
+## Stage 7 — AI and automation
+- [ ] Provider-independent AI adapter
+- [ ] Financial assistant with organization-scoped context
+- [ ] OCR and document extraction
+- [ ] Expense categorization and anomaly detection
+- [ ] Cash-flow forecasts with explainable assumptions and human review
+
+## Stage 8 — SaaS operations and mobile
 - [ ] Plans, trials and subscription lifecycle
 - [ ] Payment-provider adapters
 - [ ] Email-provider adapter and templates
 - [ ] Admin tools and audit logs
+- [ ] Android and iOS application clients
+- [ ] Push notifications and deep links
 
-## Stage 8 — Production readiness
-- [ ] Unit, integration and end-to-end tests
-- [ ] Security review and authorization tests
+## Stage 9 — Production readiness
+- [ ] Unit, integration, end-to-end and authorization tests
+- [ ] Security review and tenant-isolation tests
 - [ ] Deployment, backups and restore drills
 - [ ] Monitoring, error reporting and operational documentation
 
-> A checked item means the file or scaffold exists; it does not imply production validation.
+> A checked item means the implementation scaffold exists. It does not imply production validation. No production launch before tests and a security review.
