@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       ...parsed.data,
       currency: parsed.data.currency.toUpperCase(),
       slug: slugify(parsed.data.name),
-      memberships: { create: { userId: user.id, role: "OWNER" } },
+      memberships: { create: { user: { connect: { id: user.id } }, role: "OWNER" } },
     },
     select: { id: true, name: true, slug: true, currency: true, timezone: true, locale: true },
   });
