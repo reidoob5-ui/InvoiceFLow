@@ -4,19 +4,19 @@ import { prisma } from "@/lib/db";
 
 export class InvoiceInputError extends Error {}
 
-export async function prepareInvoiceLines(input: unknown, organizationId: string) {
+export async function prepareInvoiceLines(input: unknown, organizationId: string, currency?: string) {
   if (!Array.isArray(input) || input.length < 1 || input.length > 100) {
     throw new InvoiceInputError("Adiciona entre 1 e 100 linhas à factura.");
   }
   const productIds = [...new Set(input.map((line) => line?.productId).filter((id): id is string => typeof id === "string" && id.length > 0))];
   const taxIds = [...new Set(input.map((line) => line?.taxRateId).filter((id): id is string => typeof id === "string" && id.length > 0))];
-  const [products, taxes] = await Promise.all([
-    productIds.length ? prisma.product.findMany({ where: { id: { in: productIds }, organizationId, archivedAt: null } }) : [],
-    taxIds.length ? prisma.taxRate.findMany({ where: { id: { in: taxIds }, organizationId, active: true } }) : [],
-  ]);
+  const products = productIds.length ? await prisma.product.findMany({ where: { id: { in: productIds }, organizationId, archivedAt: null } }) : [];
   if (products.length !== productIds.length) throw new InvoiceInputError("Um ou mais produtos não existem ou não pertencem a esta empresa.");
-  if (taxes.length !== taxIds.length) throw new InvoiceInputError("Uma ou mais taxas não existem ou estão inactivas.");
-
+  if (currency && products.some((p) => p.currency !== currency)) throw new InvoiceInputError("A moeda da factura deve corresponder à moeda de cada produto do catálogo. Actualiza o produto ou escolhe outra moeda.");
+  const productTaxIds = products.map((p) => p.taxRateId).filter((id): id is string => !!id);
+  const allTaxIds = [...new Set([...taxIds, ...productTaxIds])];
+  const taxes = allTaxIds.length ? await prisma.taxRate.findMany({ where: { id: { in: allTaxIds }, organizationId, active: true } }) : [];
+  if (taxes.length !== allTaxIds.length) throw new InvoiceInputError("Uma ou mais taxas não existem ou estão inactivas.");
   const productMap = new Map(products.map((p) => [p.id, p]));
   const taxMap = new Map(taxes.map((t) => [t.id, t]));
   const prepared = input.map((raw, index) => {
