@@ -4,6 +4,7 @@ import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { formatDocumentNumber, sequenceKey } from "@/lib/numbering";
 import { addDays } from "@/lib/invoice-calc";
+import { retryOnConflict } from "@/lib/tx-retry";
 
 export const runtime = "nodejs";
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -16,7 +17,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   }
   const { id } = await context.params;
   const organizationId = current.membership.organizationId;
-  const invoice = await prisma.$transaction(async (tx) => {
+  const invoice = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const draft = await tx.invoice.findFirst({ where: { id, organizationId }, include: { lines: true, organization: true } });
     if (!draft) return null;
     if (draft.status !== "DRAFT") throw new Error("NOT_DRAFT");
@@ -37,7 +38,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       data: { number, status: "ISSUED", issueDate: now, dueDate, events: { create: { userId: current.user.id, action: "issued", data: { number } } } },
       select: { id: true, number: true, status: true, issueDate: true, dueDate: true, total: true, currency: true },
     });
-  }, { isolationLevel: "Serializable" }).catch((error) => {
+  }, { isolationLevel: "Serializable" })).catch((error) => {
     if (error instanceof Error && error.message === "NOT_DRAFT") return "NOT_DRAFT" as const;
     if (error instanceof Error && error.message === "EMPTY_INVOICE") return "EMPTY_INVOICE" as const;
     throw error;

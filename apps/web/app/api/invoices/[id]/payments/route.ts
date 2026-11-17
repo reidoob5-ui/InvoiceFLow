@@ -4,6 +4,7 @@ import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { balanceDue, deriveInvoiceStatus } from "@/lib/invoice-calc";
 import { D } from "@/lib/money";
+import { retryOnConflict } from "@/lib/tx-retry";
 
 export const runtime = "nodejs";
 const methods = ["CASH", "BANK_TRANSFER", "CARD", "MOBILE_MONEY", "CHECK", "OTHER"] as const;
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const notes = typeof body?.notes === "string" ? body.notes.trim().slice(0, 1000) || null : null;
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000000000) return NextResponse.json({ error: "O valor recebido deve ser superior a zero." }, { status: 400 });
   const organizationId = current.membership.organizationId;
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findFirst({ where: { id, organizationId }, select: { id: true, clientId: true, status: true, total: true, amountPaid: true, currency: true, dueDate: true } });
     if (!invoice) return { error: "NOT_FOUND" as const };
     if (invoice.status === "DRAFT" || invoice.status === "VOID") return { error: "NOT_PAYABLE" as const };
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const nextStatus = deriveInvoiceStatus({ current: invoice.status, total: invoice.total, amountPaid: nextPaid, dueDate: invoice.dueDate });
     await tx.invoice.update({ where: { id }, data: { amountPaid: nextPaid.toFixed(2), status: nextStatus, events: { create: { userId: current.user.id, action: "payment_recorded", data: { paymentId: payment.id, amount: paymentAmount.toFixed(2) } } } } });
     return { payment, amountPaid: nextPaid.toFixed(2), balanceDue: balanceDue(invoice.total, nextPaid).toFixed(2), status: nextStatus };
-  }, { isolationLevel: "Serializable" });
+  }, { isolationLevel: "Serializable" }));
   if ("error" in result) {
     if (result.error === "NOT_FOUND") return NextResponse.json({ error: "Factura não encontrada." }, { status: 404 });
     if (result.error === "NOT_PAYABLE") return NextResponse.json({ error: "Só é possível receber pagamentos de facturas emitidas." }, { status: 409 });

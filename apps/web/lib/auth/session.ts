@@ -9,6 +9,11 @@ export function hashSessionToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+export async function getClientIp() {
+  const headerStore = await headers();
+  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || headerStore.get("x-real-ip")?.trim() || null;
+}
+
 export async function createSession(userId: string, activeOrganizationId?: string | null) {
   const token = randomBytes(32).toString("base64url");
   const headerStore = await headers();

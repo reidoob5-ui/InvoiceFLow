@@ -756,6 +756,7 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@index([userId, createdAt])
+  @@index([action, ip, createdAt])
 }
 
 model ApiKey {

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { decryptSecret } from "@/lib/auth/tokens";
 import { verifyTotp } from "@/lib/auth/totp";
-import { createSession, audit } from "@/lib/auth/session";
+import { createSession, audit, getClientIp } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 
@@ -14,12 +14,19 @@ export async function POST(request: NextRequest) {
     const password = typeof body.password === "string" ? body.password : "";
     const code = typeof body.code === "string" ? body.code : "";
     if (!email || !password) return NextResponse.json({ error: "E-mail e palavra-passe são obrigatórios." }, { status: 400 });
+    // Limite por IP: 20 falhas em 15 minutos (protege contra tentativas em muitas contas diferentes).
+    const ip = await getClientIp();
+    if (ip) {
+      const recentFailures = await prisma.auditLog.count({ where: { action: "auth.login_failed", ip, createdAt: { gte: new Date(Date.now() - 15 * 60_000) } } });
+      if (recentFailures >= 20) return NextResponse.json({ error: "Demasiadas tentativas. Tente novamente dentro de alguns minutos." }, { status: 429 });
+    }
     const user = await prisma.user.findUnique({ where: { email } });
     // Conta bloqueada: recusa antes de verificar a palavra-passe (não confirma se a palavra-passe estava certa).
     if (user?.lockedUntil && user.lockedUntil > new Date())
       return NextResponse.json({ error: "Conta temporariamente bloqueada. Tente novamente mais tarde." }, { status: 423 });
     // Cada falha (palavra-passe ou código 2FA) conta para o bloqueio: 8 falhas = 15 minutos.
     const registerFailure = async () => {
+      await audit({ action: "auth.login_failed", userId: user?.id ?? null });
       if (!user) return;
       const updated = await prisma.user.update({ where: { id: user.id }, data: { failedLogins: { increment: 1 } }, select: { failedLogins: true } });
       if (updated.failedLogins >= 8)
