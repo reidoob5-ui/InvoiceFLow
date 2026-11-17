@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +14,7 @@ const schema = z.object({
 function slugify(value: string) {
   const base = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "workspace";
-  return `${base}-${crypto.randomUUID().slice(0, 6)}`;
+  return `${base}-${randomUUID().slice(0, 6)}`;
 }
 
 export async function GET() {
