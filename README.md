@@ -1,47 +1,52 @@
 # InvoiceFlow
 
-Premium invoicing and business-finance workspace, designed for a global market.
+Premium global business-finance platform for invoicing, financial operations and AI-assisted workflows.
 
-## Product direction
+## Approved product requirements
 
-- Premium user experience
-- One codebase for multi-tenant SaaS and dedicated single-tenant deployments
-- International-ready data model (organization currency and timezone)
-- Strict server-side tenant isolation as a non-negotiable security requirement
+- **Scope:** Complete platform covering invoicing, clients, products, expenses, payments, suppliers, cash flow, estimates, reports, tax, teams, administration, subscriptions and integrations.
+- **AI:** Integrated assistant, OCR/document extraction, expense classification, anomaly detection and cash-flow forecasting.
+- **Platforms:** Responsive web plus Android and iOS clients; desktop and tablet support.
+- **Business model:** Multi-tenant SaaS and dedicated single-tenant deployment.
+- **Market:** Global, multilingual and multi-currency, with country-specific tax configuration.
+- **Experience:** Premium, responsive and accessible.
 
 ## Stack
 
-Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL
+Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL · bcryptjs
 
-## Current status — Stage 1 foundation
+## Current implementation status
 
-This repository currently contains the application foundation and a dashboard preview with sample data. The dashboard is not connected to a database yet. Authentication, tenant authorization, CRUD workflows, invoice issuance, PDF generation, email delivery, payment processing, and production deployment are not implemented.
+### Stage 1 — Foundation
+Application scaffold, premium dashboard preview and initial PostgreSQL/Prisma data model. Dashboard figures are sample data.
 
-## Run locally
+### Stage 2 — Identity and organizations (implementation in progress)
+Registration and login screens; registration/login/logout/current-user APIs; bcrypt password hashing; opaque random sessions stored as SHA-256 hashes and delivered in HttpOnly cookies; first-organization creation with OWNER membership; authenticated organization listing and creation.
+
+**Not yet production-ready:** password reset, email verification, rate limiting, security tests, complete role-management UI, and tenant-protected business CRUD APIs. The new authentication and organization code must be installed, compiled, exercised against PostgreSQL and security-reviewed in the development environment before production use.
+
+## Run in a cloud development environment
 
 Requirements: Node.js 20.9+ and PostgreSQL 16+.
 
 1. Install dependencies: `npm install`
-2. Create local environment file: copy `.env.example` to `.env` and set `DATABASE_URL`.
+2. Create `.env` from `.env.example` and configure `DATABASE_URL`.
 3. Generate Prisma client: `npm run db:generate`
-4. Create the database migration: `npm run db:migrate`
-5. Start development server: `npm run dev`
-6. Open `http://localhost:3000`.
+4. Apply the development schema: `npm run db:migrate`
+5. Start the app: `npm run dev`
+6. Open the forwarded port 3000.
 
-If you use Docker on a computer, start PostgreSQL with `docker compose up -d db` before running the Prisma commands. On Android, use a cloud development environment such as GitHub Codespaces and a hosted PostgreSQL service instead of trying to run Docker locally.
-
-## Environment variables
-
-See `.env.example`. Never commit `.env`, passwords, API keys, or production secrets.
+On Android, use GitHub Codespaces in the browser and a hosted PostgreSQL service; local Docker is not required.
 
 ## Multi-tenant security principles
 
-- Resolve the active organization from the authenticated server-side session.
-- Verify membership and role on every protected server operation.
-- Never trust an organization ID supplied by the browser.
-- Scope every database query by the authorized organization ID.
-- Keep invoice line descriptions, prices, tax rates, and totals as immutable issue-time snapshots in the invoicing stage.
+- Resolve the active organization from authenticated server-side membership.
+- Verify membership and role on every protected operation.
+- Never trust organization IDs supplied by the browser without checking membership.
+- Scope every business query by the authorized organization ID.
+- Keep issue-time invoice details as immutable snapshots.
+- Never commit environment files, passwords, API keys or production secrets.
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md).
+See [docs/ROADMAP.md](docs/ROADMAP.md) for all approved product requirements and implementation stages.
