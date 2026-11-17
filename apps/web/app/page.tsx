@@ -58,6 +58,7 @@ export default async function Home() {
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/invoices">Facturas</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/clients">Clientes</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/products">Produtos e serviços</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/suppliers">Fornecedores</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/expenses">Despesas</a>
         </nav>
         <div className="mt-auto rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4"><div className="mb-2 text-sm font-semibold">{membership.organization.name}</div><p className="text-xs leading-5 text-slate-400">{current.user.email}</p><form action="/api/auth/logout" method="post" className="mt-4"><button className="text-xs text-indigo-300 hover:text-indigo-200">Terminar sessão</button></form></div>
