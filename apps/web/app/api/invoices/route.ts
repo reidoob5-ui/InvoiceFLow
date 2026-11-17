@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   const withholdingRate = Number(body.withholdingRate ?? 0);
   if (!Number.isFinite(withholdingRate) || withholdingRate < 0 || withholdingRate > 100) return NextResponse.json({ error: "Retenção inválida." }, { status: 400 });
   try {
-    const lines = await prepareInvoiceLines(body.lines, organizationId);
+    const lines = await prepareInvoiceLines(body.lines, organizationId, currency);
     const calculated = calculatePreparedLines(lines, withholdingRate);
     const invoice = await prisma.invoice.create({
       data: {
