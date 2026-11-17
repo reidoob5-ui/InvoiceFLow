@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const invoices = await prisma.invoice.findMany({
     where: { organizationId: current.membership.organizationId,
       ...(status && allowed.includes(status) ? { status: status as "DRAFT" | "ISSUED" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "VOID" } : {}),
-      ...(q ? { OR: [{ number: { contains: q, mode: "insensitive" } }, { client: { name: { contains: q, mode: "insensitive" } } }] } : {}) },
+      ...(q ? { OR: [{ number: { contains: q, mode: "insensitive" } }, { client: { is: { name: { contains: q, mode: "insensitive" } } } }] } : {}) },
     orderBy: [{ createdAt: "desc" }], take: 200,
     select: { id: true, number: true, status: true, currency: true, subtotal: true, taxTotal: true, total: true, amountPaid: true, issueDate: true, dueDate: true, createdAt: true, client: { select: { name: true } } },
   });
