@@ -12,11 +12,13 @@
     "db:studio": "prisma studio",
     "test": "vitest run",
     "db:local": "node scripts/dev-db.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.10.0",
-    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/adapter-pg": "^6.19.0",
     "@prisma/client": "^6.19.0",
     "decimal.js": "^10.6.0",
     "lucide-react": "^0.468.0",
@@ -45,5 +47,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
+  },
+  "prisma": {
+    "seed": "tsx scripts/seed.ts"
   }
 }

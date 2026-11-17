@@ -1,47 +1,54 @@
 # InvoiceFlow
 
-Premium invoicing and business-finance workspace, designed for a global market.
+Premium global business-finance SaaS for invoicing, expenses, quotes, cash flow and AI-assisted operations.
 
 ## Product direction
 
-- Premium user experience
-- One codebase for multi-tenant SaaS and dedicated single-tenant deployments
-- International-ready data model (organization currency and timezone)
-- Strict server-side tenant isolation as a non-negotiable security requirement
+- Premium responsive web application; native Android/iOS are a later phase.
+- Multi-tenant SaaS and dedicated single-tenant deployments.
+- Strict server-side tenant isolation: every protected operation must resolve the organization from the authenticated session and verify membership.
+- International-ready currencies, locales, tax configuration and time zones.
 
 ## Stack
 
-Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL
+Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL.
 
-## Current status — Stage 1 foundation
-
-This repository currently contains the application foundation and a dashboard preview with sample data. The dashboard is not connected to a database yet. Authentication, tenant authorization, CRUD workflows, invoice issuance, PDF generation, email delivery, payment processing, and production deployment are not implemented.
-
-## Run locally
+## Setup
 
 Requirements: Node.js 20.9+ and PostgreSQL 16+.
 
-1. Install dependencies: `npm install`
-2. Create local environment file: copy `.env.example` to `.env` and set `DATABASE_URL`.
-3. Generate Prisma client: `npm run db:generate`
-4. Create the database migration: `npm run db:migrate`
-5. Start development server: `npm run dev`
-6. Open `http://localhost:3000`.
+1. Run `npm install`.
+2. Copy `.env.example` to `.env.local`; set `DATABASE_URL` and a random `APP_SECRET` (at least 32 characters).
+3. Run `npm run db:generate`.
+4. Run `npm run db:migrate` to create/apply the development migration.
+5. Run `npm run db:seed` to populate Free, Starter, Professional, Business and Enterprise plans.
+6. Run `npm run dev`.
 
-If you use Docker on a computer, start PostgreSQL with `docker compose up -d db` before running the Prisma commands. On Android, use a cloud development environment such as GitHub Codespaces and a hosted PostgreSQL service instead of trying to run Docker locally.
+On Android, use GitHub Codespaces and a hosted PostgreSQL service; Docker/embedded PostgreSQL are intended for a computer or compatible cloud environment.
 
-## Environment variables
+## Database commands
 
-See `.env.example`. Never commit `.env`, passwords, API keys, or production secrets.
+- `npm run db:generate`: generate Prisma Client.
+- `npm run db:migrate`: create/apply a local development migration.
+- `npm run db:deploy`: apply committed migrations in deployment.
+- `npm run db:seed`: upsert the default subscription plans.
+- `npm run db:studio`: open Prisma Studio.
 
-## Multi-tenant security principles
+The Prisma schema is the data model, not a substitute for migrations. Do not deploy until a migration has been generated, reviewed and applied to a real PostgreSQL database.
 
-- Resolve the active organization from the authenticated server-side session.
-- Verify membership and role on every protected server operation.
+## Quality
+
+`npm test`, `npm run typecheck`, `npm run lint` and `npm run build`. GitHub Actions runs these checks on implementation branches and pull requests.
+
+## Security requirements
+
 - Never trust an organization ID supplied by the browser.
-- Scope every database query by the authorized organization ID.
-- Keep invoice line descriptions, prices, tax rates, and totals as immutable issue-time snapshots in the invoicing stage.
+- Resolve the active organization from a valid server-side session.
+- Verify active membership and role on every protected operation.
+- Scope every tenant query by the authorized organization ID.
+- Keep issued-document snapshots immutable.
+- Keep secrets in environment variables; never commit credentials.
 
-## Roadmap
+## Current implementation status
 
-See [docs/ROADMAP.md](docs/ROADMAP.md).
+Core domain libraries and unit tests exist. Database bootstrap, user-facing workflows, tenant-scoped APIs, email delivery, payment integrations, AI workflows and production deployment are still being implemented in stages. A green unit-test run alone does not certify production readiness.
