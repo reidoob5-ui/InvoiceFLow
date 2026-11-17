@@ -15,18 +15,28 @@ export async function POST(request: NextRequest) {
     const code = typeof body.code === "string" ? body.code : "";
     if (!email || !password) return NextResponse.json({ error: "E-mail e palavra-passe são obrigatórios." }, { status: 400 });
     const user = await prisma.user.findUnique({ where: { email } });
+    // Conta bloqueada: recusa antes de verificar a palavra-passe (não confirma se a palavra-passe estava certa).
+    if (user?.lockedUntil && user.lockedUntil > new Date())
+      return NextResponse.json({ error: "Conta temporariamente bloqueada. Tente novamente mais tarde." }, { status: 423 });
+    // Cada falha (palavra-passe ou código 2FA) conta para o bloqueio: 8 falhas = 15 minutos.
+    const registerFailure = async () => {
+      if (!user) return;
+      const updated = await prisma.user.update({ where: { id: user.id }, data: { failedLogins: { increment: 1 } }, select: { failedLogins: true } });
+      if (updated.failedLogins >= 8)
+        await prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: new Date(Date.now() + 15 * 60_000) } });
+    };
     const valid = await verifyPassword(password, user?.passwordHash);
     if (!user || !valid || user.status !== "ACTIVE") {
-      if (user) {
-        const failures = user.failedLogins + 1;
-        await prisma.user.update({ where: { id: user.id }, data: { failedLogins: failures, lockedUntil: failures >= 8 ? new Date(Date.now() + 15 * 60_000) : null } });
-      }
+      await registerFailure();
       return NextResponse.json({ error: "Credenciais inválidas." }, { status: 401 });
     }
-    if (user.lockedUntil && user.lockedUntil > new Date())
-      return NextResponse.json({ error: "Conta temporariamente bloqueada. Tente novamente mais tarde." }, { status: 423 });
-    if (user.twoFactorEnabled && (!user.twoFactorSecret || !code || !verifyTotp(decryptSecret(user.twoFactorSecret), code)))
-      return NextResponse.json({ error: "Código de autenticação inválido." }, { status: 401 });
+    if (user.twoFactorEnabled) {
+      if (!code) return NextResponse.json({ error: "Introduza o código de autenticação." }, { status: 401 });
+      if (!user.twoFactorSecret || !verifyTotp(decryptSecret(user.twoFactorSecret), code)) {
+        await registerFailure();
+        return NextResponse.json({ error: "Código de autenticação inválido." }, { status: 401 });
+      }
+    }
     const membership = await prisma.membership.findFirst({
       where: { userId: user.id, status: "ACTIVE", organization: { status: "ACTIVE" } },
       orderBy: { createdAt: "asc" }, select: { organizationId: true },
