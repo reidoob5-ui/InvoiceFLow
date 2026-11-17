@@ -1,85 +1,83 @@
-import { ArrowDownRight, ArrowUpRight, Bell, CircleHelp, FileText, LayoutDashboard, Plus, Search, Settings2, Users, WalletCards } from "lucide-react";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { getCurrentSession } from "@/lib/auth/session";
 
-const invoices = [
-  { id: "INV-2026-0148", client: "Northstar Studio", date: "Nov 16, 2026", amount: "$4,850.00", status: "Paid", tone: "green" },
-  { id: "INV-2026-0147", client: "Atlas Digital", date: "Nov 15, 2026", amount: "$2,400.00", status: "Pending", tone: "amber" },
-  { id: "INV-2026-0146", client: "Morrow & Co.", date: "Nov 13, 2026", amount: "$1,250.00", status: "Overdue", tone: "red" },
-  { id: "INV-2026-0145", client: "Vertex Labs", date: "Nov 11, 2026", amount: "$3,600.00", status: "Paid", tone: "green" },
-];
+function money(value: number, currency: string) {
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(value);
+}
 
-const bars = [34, 48, 42, 66, 53, 76, 61, 83, 68, 92, 74, 100];
+export default async function Home() {
+  const current = await getCurrentSession();
+  if (!current) redirect("/login");
+  if (!current.membership) redirect("/onboarding");
 
-export default function Home() {
+  const membership = current.membership;
+  const organizationId = membership.organizationId;
+  const currency = membership.organization.currency || "USD";
+  const [totals, clientCount, paidCount, recentInvoices, sixMonthInvoices] = await Promise.all([
+    prisma.invoice.aggregate({
+      where: { organizationId, status: { not: "VOID" } },
+      _sum: { total: true, amountPaid: true },
+      _count: { _all: true },
+    }),
+    prisma.client.count({ where: { organizationId, archivedAt: null } }),
+    prisma.invoice.count({ where: { organizationId, status: "PAID" } }),
+    prisma.invoice.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: { id: true, number: true, total: true, currency: true, status: true, createdAt: true, client: { select: { name: true } } },
+    }),
+    prisma.invoice.findMany({
+      where: { organizationId, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1) }, status: { not: "VOID" } },
+      select: { total: true, createdAt: true },
+    }),
+  ]);
+
+  const revenue = Number(totals._sum.amountPaid ?? 0);
+  const outstanding = Math.max(0, Number(totals._sum.total ?? 0) - revenue);
+  const months = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index));
+    return { key: `${date.getFullYear()}-${date.getMonth()}`, label: new Intl.DateTimeFormat("pt", { month: "short" }).format(date), amount: 0 };
+  });
+  for (const invoice of sixMonthInvoices) {
+    const key = `${invoice.createdAt.getFullYear()}-${invoice.createdAt.getMonth()}`;
+    const month = months.find((item) => item.key === key);
+    if (month) month.amount += Number(invoice.total);
+  }
+  const maxMonth = Math.max(1, ...months.map((month) => month.amount));
+  const statusLabel: Record<string, string> = { DRAFT: "Rascunho", ISSUED: "Emitida", PARTIALLY_PAID: "Parcial", PAID: "Paga", OVERDUE: "Vencida", VOID: "Anulada" };
+
   return (
     <main className="min-h-screen lg:grid lg:grid-cols-[250px_1fr]">
       <aside className="hidden border-r border-white/10 bg-slate-950/40 p-6 lg:flex lg:flex-col">
-        <div className="mb-12 flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500 text-lg font-black">I</div>
-          <div><div className="text-lg font-semibold tracking-tight">InvoiceFlow</div><div className="text-xs text-slate-500">FINANCE WORKSPACE</div></div>
-        </div>
-        <div className="mb-3 text-[10px] font-semibold tracking-[.2em] text-slate-500">WORKSPACE</div>
+        <div className="mb-12 flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500 text-lg font-black">I</div><div><div className="text-lg font-semibold tracking-tight">InvoiceFlow</div><div className="text-xs text-slate-500">FINANCE WORKSPACE</div></div></div>
+        <div className="mb-3 text-[10px] font-semibold tracking-[.2em] text-slate-500">ESPAÇO DE TRABALHO</div>
         <nav className="space-y-2 text-sm">
-          <a className="flex items-center gap-3 rounded-xl bg-indigo-500/15 px-4 py-3 font-medium text-indigo-200" href="#"><LayoutDashboard size={17}/> Overview</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="#"><FileText size={17}/> Invoices</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="#"><Users size={17}/> Clients</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="#"><WalletCards size={17}/> Expenses</a>
+          <a className="flex items-center gap-3 rounded-xl bg-indigo-500/15 px-4 py-3 font-medium text-indigo-200" href="/">Visão geral</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/invoices">Facturas</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/clients">Clientes</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/products">Produtos e serviços</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/taxes">Impostos e taxas</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/suppliers">Fornecedores</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/expenses">Despesas</a>
         </nav>
-        <div className="mb-3 mt-10 text-[10px] font-semibold tracking-[.2em] text-slate-500">PREFERENCES</div>
-        <nav className="space-y-2 text-sm">
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="#"><Settings2 size={17}/> Settings</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="#"><CircleHelp size={17}/> Help center</a>
-        </nav>
-        <div className="mt-auto rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
-          <div className="mb-2 text-sm font-semibold">Your business, clearer.</div>
-          <p className="text-xs leading-5 text-slate-400">A single place to manage invoices, clients and cash flow.</p>
-          <div className="mt-4 h-1.5 rounded-full bg-white/10"><div className="h-1.5 w-2/3 rounded-full bg-indigo-400"/></div>
-          <div className="mt-2 text-[10px] text-slate-500">Workspace preview</div>
-        </div>
+        <div className="mt-auto rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4"><div className="mb-2 text-sm font-semibold">{membership.organization.name}</div><p className="text-xs leading-5 text-slate-400">{current.user.email}</p><form action="/api/auth/logout" method="post" className="mt-4"><button className="text-xs text-indigo-300 hover:text-indigo-200">Terminar sessão</button></form></div>
       </aside>
-
       <section className="mx-auto w-full max-w-[1500px] px-5 py-7 sm:px-8 lg:px-10">
-        <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
-          <div><p className="text-sm text-slate-500">Monday, November 17, 2026</p><h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Good morning, Alex <span>✦</span></h1><p className="mt-2 text-sm text-slate-400">Here&apos;s what&apos;s happening with your business today.</p></div>
-          <div className="flex items-center gap-3">
-            <button aria-label="Search" className="rounded-xl border border-white/10 p-3 text-slate-400"><Search size={18}/></button>
-            <button aria-label="Notifications" className="relative rounded-xl border border-white/10 p-3 text-slate-400"><Bell size={18}/><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-indigo-400"/></button>
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-cyan-400 text-sm font-bold text-slate-950">A</div>
-          </div>
-        </header>
-
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Financial overview</h2><p className="mt-1 text-xs text-slate-500">A snapshot of your business performance</p></div><button className="flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold shadow-lg shadow-indigo-950/40 hover:bg-indigo-400"><Plus size={16}/> Create invoice</button></div>
-
+        <header className="mb-10 flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-slate-500">{new Intl.DateTimeFormat("pt-PT", { dateStyle: "full" }).format(new Date())}</p><h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Olá, {current.user.name || current.user.email.split("@")[0]}</h1><p className="mt-2 text-sm text-slate-400">Resumo financeiro de {membership.organization.name}.</p></div><a href="/invoices/new" className="rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold shadow-lg shadow-indigo-950/40 hover:bg-indigo-400">+ Criar factura</a></header>
+        <div className="mb-6"><h2 className="text-lg font-semibold">Visão financeira</h2><p className="mt-1 text-xs text-slate-500">Valores calculados a partir dos registos da tua empresa.</p></div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: "Total revenue", value: "$24,580.00", change: "+12.8%", icon: WalletCards, up: true },
-            { label: "Outstanding", value: "$8,240.00", change: "4 invoices", icon: FileText, up: false },
-            { label: "Total clients", value: "128", change: "+8 this month", icon: Users, up: true },
-            { label: "Paid invoices", value: "86", change: "+6.4%", icon: FileText, up: true },
-          ].map((item) => <div key={item.label} className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10">
-            <div className="flex items-center justify-between"><span className="text-sm text-slate-400">{item.label}</span><item.icon size={18} className="text-indigo-300"/></div>
-            <div className="mt-5 text-2xl font-semibold tracking-tight">{item.value}</div>
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">{item.up ? <ArrowUpRight size={14} className="text-emerald-400"/> : <ArrowDownRight size={14} className="text-amber-400"/>}<span>{item.change}</span><span>vs last month</span></div>
-          </div>)}
+          {[{label:"Recebido",value:money(revenue,currency)},{label:"Por receber",value:money(outstanding,currency)},{label:"Clientes activos",value:String(clientCount)},{label:"Facturas pagas",value:String(paidCount)}].map((item)=><div key={item.label} className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10"><div className="text-sm text-slate-400">{item.label}</div><div className="mt-5 text-2xl font-semibold tracking-tight">{item.value}</div><div className="mt-2 text-xs text-slate-500">Dados reais · {membership.organization.name}</div></div>)}
         </div>
-
         <div className="mt-6 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6">
-            <div className="flex items-start justify-between"><div><h3 className="font-semibold">Revenue overview</h3><p className="mt-1 text-xs text-slate-500">Your income performance over the year</p></div><span className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400">This year⌄</span></div>
-            <div className="mt-8 flex h-48 items-end gap-2 sm:gap-4">{bars.map((height, i) => <div key={i} className="flex h-full flex-1 flex-col justify-end"><div className="w-full rounded-t-md bg-gradient-to-t from-indigo-600/60 to-indigo-400" style={{height: height + "%"}}/><span className="mt-3 text-center text-[10px] text-slate-600">{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i]}</span></div>)}</div>
-            <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5"><div><div className="text-xs text-slate-500">Total revenue</div><div className="mt-1 text-xl font-semibold">$24,580.00</div></div><div className="text-right"><div className="text-xs text-slate-500">Growth</div><div className="mt-1 flex items-center gap-1 text-sm font-medium text-emerald-400"><ArrowUpRight size={15}/>12.8%</div></div></div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">Quick actions</h3><p className="mt-1 text-xs text-slate-500">Shortcuts to your daily work</p>
-            <div className="mt-6 space-y-3">
-              {[["Create an invoice","Send a professional invoice to a client",FileText],["Add a new client","Keep your contacts organised",Users],["Record an expense","Track your business spending",WalletCards]].map(([title,desc,Icon]) => <button key={title as string} className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-3 text-left hover:border-indigo-400/40 hover:bg-white/[.03]"><span className="rounded-lg bg-indigo-500/15 p-2.5 text-indigo-300"><Icon size={18}/></span><span className="min-w-0 flex-1"><span className="block text-sm font-medium">{title as string}</span><span className="mt-1 block text-xs text-slate-500">{desc as string}</span></span><span className="text-slate-500">›</span></button>)}
-            </div>
-          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">Facturação recente</h3><p className="mt-1 text-xs text-slate-500">Total de documentos criados nos últimos seis meses</p><div className="mt-8 flex h-48 items-end gap-3">{months.map((month)=><div key={month.key} className="flex h-full flex-1 flex-col justify-end"><div title={money(month.amount,currency)} className="w-full rounded-t-md bg-gradient-to-t from-indigo-600/60 to-indigo-400" style={{height:`${Math.max(3,month.amount/maxMonth*100)}%`}}/><span className="mt-3 text-center text-[10px] text-slate-500">{month.label}</span></div>)}</div></div>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">A tua empresa</h3><p className="mt-1 text-xs text-slate-500">Espaço de trabalho activo</p><div className="mt-6"><div className="text-xl font-semibold">{membership.organization.name}</div><div className="mt-2 text-sm text-slate-400">{membership.role}</div><div className="mt-4 rounded-xl border border-white/10 p-3 text-xs text-slate-500">Moeda principal: {currency}</div></div></div>
         </div>
-
-        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-5"><div><h3 className="font-semibold">Recent invoices</h3><p className="mt-1 text-xs text-slate-500">Keep track of your latest transactions</p></div><button className="text-xs font-medium text-indigo-300 hover:text-indigo-200">View all invoices →</button></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-white/[.02] text-xs text-slate-500"><tr><th className="px-5 py-3 font-medium">Invoice</th><th className="px-5 py-3 font-medium">Client</th><th className="px-5 py-3 font-medium">Date</th><th className="px-5 py-3 font-medium">Amount</th><th className="px-5 py-3 font-medium">Status</th></tr></thead><tbody>{invoices.map(inv => <tr key={inv.id} className="border-t border-white/[.06]"><td className="px-5 py-4 font-medium text-slate-200">{inv.id}</td><td className="px-5 py-4 text-slate-400">{inv.client}</td><td className="px-5 py-4 text-slate-500">{inv.date}</td><td className="px-5 py-4 font-medium">{inv.amount}</td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs ${inv.tone === "green" ? "bg-emerald-400/10 text-emerald-300" : inv.tone === "amber" ? "bg-amber-400/10 text-amber-300" : "bg-rose-400/10 text-rose-300"}`}>{inv.status}</span></td></tr>)}</tbody></table></div>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65"><div className="border-b border-white/10 p-5"><h3 className="font-semibold">Facturas recentes</h3><p className="mt-1 text-xs text-slate-500">Os últimos documentos da empresa</p></div>
+          {recentInvoices.length===0?<div className="p-8 text-center"><p className="font-medium">Ainda não existem facturas</p><p className="mt-2 text-sm text-slate-500">Quando criares documentos, eles aparecerão aqui.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-sm"><thead className="bg-white/[.02] text-xs text-slate-500"><tr><th className="px-5 py-3 font-medium">Documento</th><th className="px-5 py-3 font-medium">Cliente</th><th className="px-5 py-3 font-medium">Data</th><th className="px-5 py-3 font-medium">Total</th><th className="px-5 py-3 font-medium">Estado</th></tr></thead><tbody>{recentInvoices.map((invoice)=><tr key={invoice.id} className="border-t border-white/[.06]"><td className="px-5 py-4 font-medium text-slate-200">{invoice.number || "Rascunho"}</td><td className="px-5 py-4 text-slate-400">{invoice.client.name}</td><td className="px-5 py-4 text-slate-500">{new Intl.DateTimeFormat("pt-PT").format(invoice.createdAt)}</td><td className="px-5 py-4 font-medium">{money(Number(invoice.total),invoice.currency || currency)}</td><td className="px-5 py-4 text-slate-300">{statusLabel[invoice.status] || invoice.status}</td></tr>)}</tbody></table></div>}
         </div>
-        <p className="mt-8 text-center text-[11px] text-slate-600">InvoiceFlow preview · Sample data only · Secure finance workspace foundation</p>
+        <p className="mt-8 text-center text-[11px] text-slate-600">InvoiceFlow · Dados da empresa autenticada e isolada por organização</p>
       </section>
     </main>
   );

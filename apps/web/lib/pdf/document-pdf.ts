@@ -131,7 +131,7 @@ export function renderDocumentPdf(doc: PdfDocument): Promise<Buffer> {
       pdf.text(value, left + width * 0.77, y, { width: width * 0.23, align: "right" });
       y += bold ? 20 : 15;
     };
-    row(L("invoice.subtotal"), money(doc.subtotal));
+    row(L("invoice.subtotal"), money((Number(doc.subtotal) + Number(doc.discountTotal)).toFixed(2)));
     if (Number(doc.discountTotal) > 0) row("Desconto", `- ${money(doc.discountTotal)}`);
     row(L("invoice.tax"), money(doc.taxTotal));
     if (Number(doc.withholdingTotal) > 0) row(L("invoice.withholding"), `- ${money(doc.withholdingTotal)}`);
