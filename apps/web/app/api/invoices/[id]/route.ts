@@ -42,12 +42,14 @@ export async function PATCH(request: NextRequest, context: Context) {
   const clientId = typeof body.clientId === "string" ? body.clientId : "";
   const client = await prisma.client.findFirst({ where: { id: clientId, organizationId, archivedAt: null }, select: { id: true } });
   if (!client) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
+  const currency = typeof body.currency === "string" ? body.currency.toUpperCase() : current.membership.organization.currency;
+  if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Moeda inválida." }, { status: 400 });
   const termsDays = Number(body.paymentTermsDays ?? 30);
   const withholdingRate = Number(body.withholdingRate ?? 0);
   if (!Number.isInteger(termsDays) || termsDays < 0 || termsDays > 365 || !Number.isFinite(withholdingRate) || withholdingRate < 0 || withholdingRate > 100)
     return NextResponse.json({ error: "Prazo ou retenção inválidos." }, { status: 400 });
   try {
-    const lines = await prepareInvoiceLines(body.lines, organizationId);
+    const lines = await prepareInvoiceLines(body.lines, organizationId, currency);
     const calculated = calculatePreparedLines(lines, withholdingRate);
     const result = await prisma.$transaction(async (tx) => {
       await tx.invoiceLine.deleteMany({ where: { invoiceId: id } });
@@ -55,7 +57,7 @@ export async function PATCH(request: NextRequest, context: Context) {
         where: { id },
         data: {
           clientId, paymentTermsDays: termsDays, withholdingRate,
-          currency: typeof body.currency === "string" ? body.currency.toUpperCase() : current.membership!.organization.currency,
+          currency,
           notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 4000) || null : null,
           terms: typeof body.terms === "string" ? body.terms.trim().slice(0, 4000) || null : null,
           ...calculated, lines: { create: calculated.lines },
