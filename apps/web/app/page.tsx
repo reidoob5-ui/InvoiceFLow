@@ -58,6 +58,7 @@ export default async function Home() {
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/invoices">Facturas</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/clients">Clientes</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/products">Produtos e serviços</a>
+          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/taxes">Impostos e taxas</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/suppliers">Fornecedores</a>
           <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/expenses">Despesas</a>
         </nav>
