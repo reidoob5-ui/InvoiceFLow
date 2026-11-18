@@ -71,9 +71,6 @@ export default async function FinancialIntelligencePage() {
       by: ["currency"], where: { organizationId, status: "CONFIRMED", receivedAt: { gte: thirtyDaysAgo } },
       _sum: { amount: true },
     }),
-    prisma.quote.count({
-      where: { organizationId, status: "SENT", validUntil: { gte: today, lte: sevenDays } },
-    }),
     prisma.expense.groupBy({
       by: ["currency"], where: { organizationId, status: "PAID", billId: null, date: { gte: thirtyDaysAgo } },
       _sum: { amount: true },
@@ -88,6 +85,9 @@ export default async function FinancialIntelligencePage() {
       where: { organizationId, status: "SENT", validUntil: { gte: today, lte: sevenDays } },
       orderBy: { validUntil: "asc" }, take: 8,
       select: { id: true, number: true, title: true, currency: true, total: true, validUntil: true, client: { select: { name: true } } },
+    }),
+    prisma.quote.count({
+      where: { organizationId, status: "SENT", validUntil: { gte: today, lte: sevenDays } },
     }),
     prisma.expense.groupBy({
       by: ["currency"], where: { organizationId, recurringFreq: { not: null }, nextRecurrence: { gte: today, lte: new Date(today.getTime() + 30 * DAY) } },
