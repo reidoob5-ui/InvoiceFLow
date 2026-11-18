@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, Calculator
 } from "lucide-react";
 
 const navigation = [
   { href: "/dashboard", label: "Visão geral", icon: LayoutDashboard, description: "O panorama do teu negócio e da actividade financeira.", accent: "from-indigo-400 to-violet-400" },
+  { href: "/business-planner", label: "Plano de rentabilidade", icon: Calculator, description: "Simula custos, preços, ponto de equilíbrio e autonomia financeira antes de vender.", accent: "from-emerald-300 to-cyan-500" },
   { href: "/invoices", label: "Facturas", icon: FileText, description: "Cria documentos, acompanha estados e controla recebimentos.", accent: "from-cyan-400 to-blue-500" },
   { href: "/quotes", label: "Orçamentos", icon: FileCheck, description: "Cria propostas comerciais e converte orçamentos aceites em facturas.", accent: "from-violet-400 to-indigo-500" },
   { href: "/clients", label: "Clientes", icon: Users, description: "Organiza contactos, histórico e relações comerciais.", accent: "from-violet-400 to-fuchsia-500" },
