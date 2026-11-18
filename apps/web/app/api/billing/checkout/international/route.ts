@@ -34,7 +34,6 @@ export async function POST(request: Request) {
       organizationId: current.membership.organizationId,
       planKey,
       interval,
-      email: current.user.email,
     });
     return NextResponse.json({ provider: "PADDLE", checkoutUrl, status: "PENDING" }, { status: 201 });
   } catch (error) {
