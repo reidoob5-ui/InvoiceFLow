@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     prisma.supplier.findMany({ where: { organizationId, archivedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.expense.groupBy({ by: ["status"], where: { organizationId }, _sum: { amount: true }, _count: { _all: true } }),
   ]);
-  return NextResponse.json({ expenses, categories, suppliers, totals: Object.fromEntries(totals.map((item) => [item.status, { amount: item._sum.amount?.toString() ?? "0", count: item._count._all }])) });
+  return NextResponse.json({ defaultCurrency: current.membership.organization.currency || "AOA", expenses, categories, suppliers, totals: Object.fromEntries(totals.map((item) => [item.status, { amount: item._sum.amount?.toString() ?? "0", count: item._count._all }])) });
 }
 
 export async function POST(request: NextRequest) {
