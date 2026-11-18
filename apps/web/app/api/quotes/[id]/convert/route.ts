@@ -43,7 +43,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     } });
     return { invoice };
   }, { isolationLevel: "Serializable" }));
-  if ("error" in result) {
+  if ("error" in result && result.error) {
     const messages: Record<string, string> = {
       NOT_FOUND: "Orçamento não encontrado.", NOT_ACCEPTED: "Só é possível converter orçamentos aceites.",
       ALREADY_CONVERTED: "Este orçamento já foi convertido.", EMPTY: "O orçamento não tem linhas.",
