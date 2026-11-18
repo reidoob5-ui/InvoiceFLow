@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentSession, audit } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { parseCsv } from "@/lib/csv";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 const clean = (v: string | undefined, max: number) => (v ?? "").trim().slice(0,max);
@@ -34,9 +34,8 @@ export async function POST(request: NextRequest) {
   }
   if (matrix.length - 1 > 500) skipped += matrix.length - 1 - 500;
   if (valid.length) {
-    const planLimit = await checkOrganizationPlanLimit(current.membership.organizationId, "maxClients", valid.length);
-    if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-    await prisma.client.createMany({ data:valid });
+    const execution = await withOrganizationPlanLimit(current.membership.organizationId, "maxClients", valid.length, (tx) => tx.client.createMany({ data:valid }));
+    if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
   }
   if (valid.length) await audit({ action:"client.csv_imported",userId:current.user.id,organizationId:current.membership.organizationId,entityType:"Client",entityId:null });
   return NextResponse.json({ imported:valid.length,skipped });
