@@ -19,6 +19,7 @@ function asLimits(value: unknown, fallback: PlanLimits): PlanLimits {
 export async function checkOrganizationPlanLimit(
   organizationId: string,
   key: "maxUsers" | "maxClients" | "maxInvoicesPerMonth",
+  adding = 1,
 ): Promise<PlanLimitResult> {
   const subscription = await prisma.subscription.findUnique({
     where: { organizationId },
@@ -46,7 +47,7 @@ export async function checkOrganizationPlanLimit(
   if (subscription && !hasActiveAccess(subscription)) {
     return { allowed: false, code: "SUBSCRIPTION_INACTIVE", planKey, planName, limit, used };
   }
-  if (limit !== null && used >= limit) {
+  if (limit !== null && used + adding > limit) {
     return { allowed: false, code: "PLAN_LIMIT_REACHED", planKey, planName, limit, used };
   }
   return { allowed: true, planKey, planName, limit, used };
