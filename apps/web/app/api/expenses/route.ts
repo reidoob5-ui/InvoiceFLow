@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
-import { D } from "@/lib/money";
+import { D, parseMoneyInput } from "@/lib/money";
 
 export const runtime = "nodejs";
 const methods = ["CASH", "BANK_TRANSFER", "CARD", "MOBILE_MONEY", "CHECK", "PROVIDER", "OTHER"] as const;
@@ -11,21 +11,18 @@ const statuses = ["PENDING", "PAID"] as const;
 function parseInput(body: unknown) {
   const input = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
   const description = typeof input.description === "string" ? input.description.trim().slice(0, 240) : "";
-  const amountText = typeof input.amount === "string" || typeof input.amount === "number" ? String(input.amount).trim() : "";
-  const amount = Number(amountText);
-  const taxText = typeof input.taxAmount === "string" || typeof input.taxAmount === "number" ? String(input.taxAmount).trim() : "0";
-  const taxAmount = Number(taxText);
+  const amount = parseMoneyInput(input.amount);
+  const taxAmount = parseMoneyInput(input.taxAmount ?? "0");
   const date = typeof input.date === "string" ? new Date(input.date) : new Date(NaN);
   const currency = typeof input.currency === "string" ? input.currency.trim().toUpperCase() : "";
   if (description.length < 2) return { error: "A descrição deve ter pelo menos 2 caracteres." };
-  if (!amountText || !Number.isFinite(amount) || amount <= 0 || amount > 999999999999) return { error: "Indica um valor válido superior a zero." };
-  if (!Number.isFinite(taxAmount) || taxAmount < 0 || taxAmount > amount) return { error: "O imposto deve ser válido e não pode exceder o valor da despesa." };
+  if (!amount || amount.lte(0)) return { error: "Indica um valor positivo com, no máximo, duas casas decimais." };
+  if (!taxAmount || taxAmount.isNegative() || taxAmount.gt(amount)) return { error: "O imposto deve ter, no máximo, duas casas decimais e não pode exceder o valor da despesa." };
   if (Number.isNaN(date.getTime())) return { error: "Indica uma data válida." };
   if (!/^[A-Z]{3}$/.test(currency)) return { error: "A moeda deve usar um código de três letras, como AOA ou USD." };
   if (input.paymentMethod && (typeof input.paymentMethod !== "string" || !methods.includes(input.paymentMethod as typeof methods[number]))) return { error: "Método de pagamento inválido." };
   if (input.status && (typeof input.status !== "string" || !statuses.includes(input.status as typeof statuses[number]))) return { error: "Estado da despesa inválido." };
-  try { if (!D(amountText).isFinite() || !D(taxText).isFinite()) return { error: "Valor inválido." }; } catch { return { error: "Valor inválido." }; }
-  return { value: { description, amount: D(amountText).toFixed(2), taxAmount: D(taxText).toFixed(2), date, currency, status: input.status === "PENDING" ? "PENDING" as const : "PAID" as const, paymentMethod: typeof input.paymentMethod === "string" && methods.includes(input.paymentMethod as typeof methods[number]) ? input.paymentMethod as typeof methods[number] : null, supplierId: typeof input.supplierId === "string" ? input.supplierId : null, categoryName: typeof input.categoryName === "string" ? input.categoryName.trim().slice(0, 80) : "" } };
+  return { value: { description, amount: amount.toFixed(2), taxAmount: taxAmount.toFixed(2), date, currency, status: input.status === "PENDING" ? "PENDING" as const : "PAID" as const, paymentMethod: typeof input.paymentMethod === "string" && methods.includes(input.paymentMethod as typeof methods[number]) ? input.paymentMethod as typeof methods[number] : null, supplierId: typeof input.supplierId === "string" ? input.supplierId : null, categoryName: typeof input.categoryName === "string" ? input.categoryName.trim().slice(0, 80) : "" } };
 }
 
 export async function GET(request: NextRequest) {
