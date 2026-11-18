@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, canAssignRole, ForbiddenError, type Role, ROLES } from "@/lib/permissions";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -38,11 +38,6 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (body?.status === "ACTIVE" || body?.status === "SUSPENDED") data.status = body.status;
   if (!data.role && !data.status) return NextResponse.json({ error: "Nenhuma alteração válida foi indicada." }, { status: 400 });
 
-  if (target.status === "SUSPENDED" && data.status === "ACTIVE") {
-    const planLimit = await checkOrganizationPlanLimit(current.membership.organizationId, "maxUsers");
-    if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-  }
-
   const removingOwner = target.role === "OWNER" && ((data.role && data.role !== "OWNER") || data.status === "SUSPENDED");
   if (removingOwner) {
     const otherOwners = await prisma.membership.count({
@@ -52,11 +47,20 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       return NextResponse.json({ error: "A empresa precisa de manter pelo menos um proprietário activo." }, { status: 409 });
   }
 
-  const updated = await prisma.membership.update({
+  const reactivating = target.status === "SUSPENDED" && data.status === "ACTIVE";
+  const updateMember = (tx: typeof prisma | import("@prisma/client").Prisma.TransactionClient) => tx.membership.update({
     where: { id: target.id },
     data,
     select: { id: true, role: true, status: true, user: { select: { id: true, name: true, email: true } } },
   });
+  let updated;
+  if (reactivating) {
+    const execution = await withOrganizationPlanLimit(current.membership.organizationId, "maxUsers", 1, (tx) => updateMember(tx));
+    if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+    updated = execution.value;
+  } else {
+    updated = await updateMember(prisma);
+  }
   await audit({
     action: "team.member_updated", userId: current.user.id, organizationId: current.membership.organizationId,
     entityType: "Membership", entityId: target.id, metadata: data,
