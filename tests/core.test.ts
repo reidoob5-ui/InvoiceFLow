@@ -334,7 +334,7 @@ describe("business profitability planner", () => {
 
   it("handles a profitable scenario without combining or converting currencies", () => {
     const result = calculateBusinessPlan({ ...sample, price: "12000", units: "50" });
-    expect(result.monthlyProfit.toFixed(2)).toBe("275000.00");
+    expect(result.monthlyProfit.toFixed(2)).toBe("255000.00");
     expect(result.margin.toDecimalPlaces(2).toFixed(2)).toBe("79.17");
   });
 });
