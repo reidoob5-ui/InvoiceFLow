@@ -9,9 +9,12 @@ import { createProxyPayCharge, isProxyPayConfigured } from "@/lib/payments/proxy
 export const runtime = "nodejs";
 
 function periodEnd(start: Date, interval: "MONTHLY" | "YEARLY") {
-  const end = new Date(start);
-  if (interval === "YEARLY") end.setUTCFullYear(end.getUTCFullYear() + 1);
-  else end.setUTCMonth(end.getUTCMonth() + 1);
+  const year = start.getUTCFullYear() + (interval === "YEARLY" ? 1 : 0);
+  const month = start.getUTCMonth() + (interval === "MONTHLY" ? 1 : 0);
+  const day = start.getUTCDate();
+  const end = new Date(Date.UTC(year, month, 1, start.getUTCHours(), start.getUTCMinutes(), start.getUTCSeconds()));
+  const lastDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0)).getUTCDate();
+  end.setUTCDate(Math.min(day, lastDay));
   return end;
 }
 
