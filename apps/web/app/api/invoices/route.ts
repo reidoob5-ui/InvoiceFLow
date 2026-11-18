@@ -20,14 +20,20 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim().slice(0, 100) ?? "";
   const status = request.nextUrl.searchParams.get("status");
   const allowed = ["DRAFT", "ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE", "VOID"];
-  const invoices = await prisma.invoice.findMany({
-    where: { organizationId: current.membership.organizationId,
-      ...(status && allowed.includes(status) ? { status: status as "DRAFT" | "ISSUED" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "VOID" } : {}),
-      ...(q ? { OR: [{ number: { contains: q, mode: "insensitive" } }, { client: { is: { name: { contains: q, mode: "insensitive" } } } }] } : {}) },
-    orderBy: [{ createdAt: "desc" }], take: 200,
-    select: { id: true, number: true, status: true, currency: true, subtotal: true, taxTotal: true, total: true, amountPaid: true, issueDate: true, dueDate: true, createdAt: true, client: { select: { name: true } } },
-  });
-  return NextResponse.json({ invoices });
+  const where = {
+    organizationId: current.membership.organizationId,
+    ...(status && allowed.includes(status) ? { status: status as "DRAFT" | "ISSUED" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "VOID" } : {}),
+    ...(q ? { OR: [{ number: { contains: q, mode: "insensitive" as const } }, { client: { is: { name: { contains: q, mode: "insensitive" as const } } } }] } : {}),
+  };
+  const [invoices, totalCount] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }], take: 200,
+      select: { id: true, number: true, status: true, currency: true, subtotal: true, taxTotal: true, total: true, amountPaid: true, issueDate: true, dueDate: true, createdAt: true, client: { select: { name: true } } },
+    }),
+    prisma.invoice.count({ where }),
+  ]);
+  return NextResponse.json({ invoices, totalCount, truncated: totalCount > invoices.length, limit: 200 });
 }
 
 export async function POST(request: NextRequest) {
