@@ -1,0 +1,46 @@
+name: Temporary dependency audit
+on:
+  push:
+    branches:
+      - "audit/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm install --ignore-scripts --no-fund --no-audit
+      - name: Audit dependency tree
+        run: |
+          npm audit --json > audit.json || true
+          node -e '
+            const fs = require("fs");
+            const a = JSON.parse(fs.readFileSync("audit.json", "utf8"));
+            console.log("AUDIT COUNTS", JSON.stringify(a.metadata?.vulnerabilities || {}));
+            for (const [name, v] of Object.entries(a.vulnerabilities || {})) {
+              console.log("\\nPACKAGE:", name, "| severity:", v.severity, "| direct:", v.isDirect, "| range:", v.range, "| fixAvailable:", JSON.stringify(v.fixAvailable));
+              for (const via of (v.via || [])) {
+                if (typeof via === "object") console.log("ADVISORY:", via.title, "| range:", via.range, "| url:", via.url);
+              }
+              console.log("DEPENDENTS:", (v.effects || []).join(", "));
+            }
+          '
+      - name: Check dependency manifest and lockfile consistency
+        run: |
+          node -e '
+            const p = require("./package.json");
+            const l = require("./package-lock.json");
+            for (const section of ["dependencies", "devDependencies"]) {
+              for (const [name, wanted] of Object.entries(p[section] || {})) {
+                const locked = l.packages[""].[section]?.[name];
+                if (locked !== wanted) console.log("LOCK DRIFT:", section, name, "package.json=", wanted, "package-lock.json=", locked);
+              }
+            }
+          '
