@@ -26,8 +26,9 @@ export async function GET() {
   const limits = (subscription?.plan.limits ?? fallback.limits) as PlanLimits;
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const [users, clients, invoices] = await Promise.all([
+  const [activeUsers, pendingInvitations, clients, invoices] = await Promise.all([
     prisma.membership.count({ where: { organizationId, status: "ACTIVE" } }),
+    prisma.invitation.count({ where: { organizationId, acceptedAt: null, expiresAt: { gt: now } } }),
     prisma.client.count({ where: { organizationId, archivedAt: null } }),
     prisma.invoice.count({ where: { organizationId, createdAt: { gte: monthStart } } }),
   ]);
@@ -50,7 +51,7 @@ export async function GET() {
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       hasAccess: hasActiveAccess(subscription, now),
     } : { status: "ACTIVE", interval: "MONTHLY", trialEndsAt: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, hasAccess: true },
-    usage: { users, clients, invoices },
+    usage: { users: activeUsers + pendingInvitations, activeUsers, pendingInvitations, clients, invoices },
     billingProviderConfigured: false,
   });
 }
