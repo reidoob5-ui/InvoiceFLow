@@ -31,7 +31,7 @@ export default async function FinancialIntelligencePage() {
   const locale = current.user.locale || current.membership.organization.locale || "pt";
   const timeZone = current.membership.organization.timezone || "UTC";
   const now = new Date();
-  const today = new Date(now);
+  const today = new Date(now.toLocaleDateString("en-CA", { timeZone }).replace(/-/g, "/"));
   today.setHours(0, 0, 0, 0);
   const sevenDays = new Date(today.getTime() + 7 * DAY);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY);
