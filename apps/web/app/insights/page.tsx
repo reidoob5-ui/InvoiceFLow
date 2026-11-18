@@ -29,7 +29,7 @@ export default async function FinancialIntelligencePage() {
 
   const organizationId = current.membership.organizationId;
   const locale = current.user.locale || current.membership.organization.locale || "pt";
-  const timeZone = current.membership.organization.timezone || "UTC";
+  const timeZone = "UTC";
   const now = new Date();
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -37,9 +37,9 @@ export default async function FinancialIntelligencePage() {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY);
 
   const [
-    overdueReceivables, overduePayables, upcomingInvoices, upcomingBills,
+    overdueReceivables, overduePayables, upcomingInvoices, upcomingInvoiceCount, upcomingBills, upcomingBillCount,
     cashIn30, expenses30, supplierPaymentsCount, supplierPayments30,
-    expiringQuotes, recurringExpenses,
+    expiringQuotes, expiringQuotesCount, recurringExpenses,
   ] = await Promise.all([
     prisma.invoice.groupBy({
       by: ["currency"],
@@ -56,10 +56,16 @@ export default async function FinancialIntelligencePage() {
       orderBy: { dueDate: "asc" }, take: 8,
       select: { id: true, number: true, currency: true, total: true, amountPaid: true, dueDate: true, client: { select: { name: true } } },
     }),
+    prisma.invoice.count({
+      where: { organizationId, status: { in: [...OPEN_INVOICES] }, dueDate: { gte: today, lte: sevenDays } },
+    }),
     prisma.bill.findMany({
       where: { organizationId, status: { in: [...OPEN_BILLS] }, dueDate: { gte: today, lte: sevenDays } },
       orderBy: { dueDate: "asc" }, take: 8,
       select: { id: true, number: true, currency: true, total: true, amountPaid: true, dueDate: true, supplier: { select: { name: true } } },
+    }),
+    prisma.bill.count({
+      where: { organizationId, status: { in: [...OPEN_BILLS] }, dueDate: { gte: today, lte: sevenDays } },
     }),
     prisma.payment.groupBy({
       by: ["currency"], where: { organizationId, status: "CONFIRMED", receivedAt: { gte: thirtyDaysAgo } },
@@ -79,6 +85,9 @@ export default async function FinancialIntelligencePage() {
       where: { organizationId, status: "SENT", validUntil: { gte: today, lte: sevenDays } },
       orderBy: { validUntil: "asc" }, take: 8,
       select: { id: true, number: true, title: true, currency: true, total: true, validUntil: true, client: { select: { name: true } } },
+    }),
+    prisma.quote.count({
+      where: { organizationId, status: "SENT", validUntil: { gte: today, lte: sevenDays } },
     }),
     prisma.expense.groupBy({
       by: ["currency"], where: { organizationId, recurringFreq: { not: null }, nextRecurrence: { gte: today, lte: new Date(today.getTime() + 30 * DAY) } },
@@ -119,9 +128,9 @@ export default async function FinancialIntelligencePage() {
 
   const totalOverdueInvoices = receivableRows.reduce((sum, item) => sum + item.count, 0);
   const totalOverdueBills = payableRows.reduce((sum, item) => sum + item.count, 0);
-  const totalUpcomingInvoices = upcomingInvoices.length;
-  const totalUpcomingBills = upcomingBills.length;
-  const totalExpiringQuotes = expiringQuotes.length;
+  const totalUpcomingInvoices = upcomingInvoiceCount;
+  const totalUpcomingBills = upcomingBillCount;
+  const totalExpiringQuotes = expiringQuotesCount;
   const totalRecurring = recurringExpenses.reduce((sum, item) => sum + item._count._all, 0);
 
   const recommendations: Array<{ level: "danger" | "warning" | "good" | "info"; title: string; detail: string; href: string }> = [];
@@ -229,7 +238,7 @@ export default async function FinancialIntelligencePage() {
       <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <div className="flex items-center gap-2"><ArrowDownRight size={18} className="text-rose-200"/><div><h2 className="font-semibold">Recebimentos a preparar</h2><p className="mt-1 text-xs text-slate-500">Facturas que vencem nos próximos sete dias</p></div></div>
         <div className="mt-4 space-y-3">{upcomingInvoices.length?upcomingInvoices.map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.07] p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.client.name}</p><p className="mt-1 text-xs text-slate-500">{item.number||"Factura"} · {item.dueDate?dateLabel(item.dueDate,locale,timeZone):"Sem vencimento"}</p></div><div className="shrink-0 text-right"><p className="text-sm font-semibold">{money(D(item.total).minus(item.amountPaid).gt(0)?D(item.total).minus(item.amountPaid):0,item.currency,locale)}</p><p className="text-[10px] text-slate-500">{item.currency}</p></div></div>):<p className="rounded-xl border border-white/[.07] p-4 text-sm text-slate-500">Nenhuma factura com vencimento nesta janela.</p>}</div>
-        <Link href="/collections" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-300">Ver facturas em aberto <ArrowRight size={13}/></Link>
+        <Link href="/invoices" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-300">Ver facturas em aberto <ArrowRight size={13}/></Link>
       </div>
       <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <div className="flex items-center gap-2"><ArrowUpRight size={18} className="text-amber-200"/><div><h2 className="font-semibold">Compromissos próximos</h2><p className="mt-1 text-xs text-slate-500">Contas de fornecedores com vencimento nesta semana</p></div></div>
