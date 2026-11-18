@@ -4,14 +4,14 @@ import { MessageCircle, Mail, CalendarClock, AlertTriangle, CheckCircle2, ArrowR
 import { prisma } from "@/lib/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { can } from "@/lib/permissions";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, D } from "@/lib/money";
 
 const DAY = 24 * 60 * 60 * 1000;
 function phoneForWhatsApp(value: string | null) {
   if (!value) return null;
   const digits = value.replace(/\D/g, "");
   // wa.me requires an international number without a leading local trunk zero.
-  return digits.length >= 8 && !digits.startsWith("0") ? digits : null;
+  return digits.length >= 10 && digits.length <= 15 && !digits.startsWith("0") ? digits : null;
 }
 function reminderText(client: string, invoice: string, balance: string, due: string, organization: string) {
   return [
@@ -36,7 +36,7 @@ export default async function CollectionsPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const horizon = new Date(today.getTime() + 7 * DAY);
-  const [invoices, organization] = await Promise.all([
+  const [invoices, invoiceCount, organization] = await Promise.all([
     prisma.invoice.findMany({
       where: {
         organizationId,
@@ -48,6 +48,13 @@ export default async function CollectionsPage() {
       select: {
         id: true, number: true, currency: true, total: true, amountPaid: true, dueDate: true,
         client: { select: { name: true, phone: true, email: true } },
+      },
+    }),
+    prisma.invoice.count({
+      where: {
+        organizationId,
+        status: { in: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"] },
+        dueDate: { not: null, lte: horizon },
       },
     }),
     prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } }),
@@ -106,6 +113,8 @@ export default async function CollectionsPage() {
         <Link href="/invoices" className="rounded-xl border border-white/15 bg-white/[.04] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Ver todas as facturas <ArrowRight size={15} className="ml-2 inline"/></Link>
       </div>
     </header>
+
+    {invoiceCount > invoices.length && <p role="status" className="rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-4 text-sm text-amber-100">A mostrar {invoices.length} de {invoiceCount} facturas com saldo e vencimento nesta janela. Refina o acompanhamento para consultar o restante.</p>}
 
     <section className="grid gap-4 sm:grid-cols-3">
       <div className="rounded-2xl border border-rose-300/15 bg-rose-400/[.05] p-5"><div className="flex items-center gap-2 text-sm text-rose-200"><AlertTriangle size={16}/> Em atraso</div><p className="mt-3 text-3xl font-semibold">{overdue.length}</p><p className="mt-1 text-xs text-slate-500">Facturas com saldo e vencimento ultrapassado</p></div>
