@@ -3,18 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Decimal from "decimal.js";
+import { calculateBusinessPlan } from "@/lib/business-planner";
 import { ArrowRight, Calculator, CircleHelp, Download, Lightbulb, ShieldCheck, Target, Wallet } from "lucide-react";
 
 type Currency = "AOA" | "USD" | "EUR" | "GBP";
 const initial = { currency: "AOA" as Currency, capital: "500000", fixed: "120000", variable: "2500", price: "7500", units: "30", ownerPay: "100000" };
 
-function amount(raw: string) {
-  try {
-    if (!raw.trim()) return new Decimal(0);
-    if (!/^\d{1,12}(?:\.\d{0,2})?$/.test(raw.trim())) return new Decimal(0);
-    return new Decimal(raw);
-  } catch { return new Decimal(0); }
-}
 function money(value: Decimal, currency: Currency) {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency, maximumFractionDigits: currency === "AOA" ? 0 : 2 }).format(value.toDecimalPlaces(currency === "AOA" ? 0 : 2, Decimal.ROUND_HALF_UP).toNumber());
 }
@@ -32,24 +26,7 @@ function Field({ label, hint, value, onChange, prefix, min = "0" }: { label: str
 export default function BusinessPlannerPage() {
   const [form, setForm] = useState(initial);
   const update = (key: keyof typeof initial, value: string) => setForm(old => ({ ...old, [key]: value }));
-  const result = useMemo(() => {
-    const capital = amount(form.capital);
-    const fixed = amount(form.fixed);
-    const variable = amount(form.variable);
-    const price = amount(form.price);
-    const units = amount(form.units);
-    const ownerPay = amount(form.ownerPay);
-    const contribution = price.minus(variable);
-    const monthlyTarget = fixed.plus(ownerPay);
-    const validUnits = units.gt(0);
-    const canBreakEven = contribution.gt(0);
-    const breakEven = canBreakEven ? monthlyTarget.div(contribution).ceil() : null;
-    const minimumPrice = validUnits ? variable.plus(monthlyTarget.div(units)) : null;
-    const monthlyProfit = contribution.mul(units).minus(monthlyTarget);
-    const margin = price.gt(0) ? contribution.div(price).mul(100) : new Decimal(0);
-    const runway = monthlyTarget.gt(0) ? capital.div(monthlyTarget) : null;
-    return { capital, fixed, variable, price, units, ownerPay, contribution, monthlyTarget, canBreakEven, breakEven, minimumPrice, monthlyProfit, margin, runway, validUnits };
-  }, [form]);
+  const result = useMemo(() => calculateBusinessPlan(form), [form]);
   const currency = form.currency;
   const positiveProfit = result.monthlyProfit.gte(0);
   const validPrice = result.price.gt(result.variable);
