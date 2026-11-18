@@ -128,7 +128,7 @@ export default async function FinancialIntelligencePage() {
   if (totalOverdueInvoices > 0) recommendations.push({
     level: "danger", title: "Há dinheiro parado em facturas vencidas",
     detail: `${totalOverdueInvoices} factura(s) têm saldo por receber. Faz o acompanhamento dos clientes antes de assumires novos compromissos.`,
-    href: "/collections",
+    href: "/invoices",
   });
   if (totalOverdueBills > 0) recommendations.push({
     level: "warning", title: "Existem pagamentos a fornecedores em atraso",
@@ -138,7 +138,7 @@ export default async function FinancialIntelligencePage() {
   if (totalUpcomingInvoices > 0) recommendations.push({
     level: "info", title: "Prepara os recebimentos desta semana",
     detail: `${totalUpcomingInvoices} factura(s) vencem nos próximos sete dias. Um lembrete antecipado pode evitar atrasos.`,
-    href: "/collections",
+    href: "/invoices",
   });
   if (totalUpcomingBills > 0) recommendations.push({
     level: "warning", title: "Planeia os pagamentos próximos",
@@ -229,7 +229,7 @@ export default async function FinancialIntelligencePage() {
       <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <div className="flex items-center gap-2"><ArrowDownRight size={18} className="text-rose-200"/><div><h2 className="font-semibold">Recebimentos a preparar</h2><p className="mt-1 text-xs text-slate-500">Facturas que vencem nos próximos sete dias</p></div></div>
         <div className="mt-4 space-y-3">{upcomingInvoices.length?upcomingInvoices.map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.07] p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.client.name}</p><p className="mt-1 text-xs text-slate-500">{item.number||"Factura"} · {item.dueDate?dateLabel(item.dueDate,locale,timeZone):"Sem vencimento"}</p></div><div className="shrink-0 text-right"><p className="text-sm font-semibold">{money(D(item.total).minus(item.amountPaid).gt(0)?D(item.total).minus(item.amountPaid):0,item.currency,locale)}</p><p className="text-[10px] text-slate-500">{item.currency}</p></div></div>):<p className="rounded-xl border border-white/[.07] p-4 text-sm text-slate-500">Nenhuma factura com vencimento nesta janela.</p>}</div>
-        <Link href="/collections" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-300">Abrir centro de cobranças <ArrowRight size={13}/></Link>
+        <Link href="/collections" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-300">Ver facturas em aberto <ArrowRight size={13}/></Link>
       </div>
       <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6">
         <div className="flex items-center gap-2"><ArrowUpRight size={18} className="text-amber-200"/><div><h2 className="font-semibold">Compromissos próximos</h2><p className="mt-1 text-xs text-slate-500">Contas de fornecedores com vencimento nesta semana</p></div></div>
