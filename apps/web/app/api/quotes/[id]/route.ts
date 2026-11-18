@@ -45,14 +45,25 @@ export async function PATCH(request: NextRequest, context: Context) {
     };
     if (!transitions[quote.status]?.includes(nextStatus)) return { error: "INVALID_TRANSITION" as const };
     if (nextStatus === "ACCEPTED" && quote.validUntil && quote.validUntil < new Date()) return { error: "EXPIRED" as const };
+    let number = quote.number;
+    if (nextStatus === "SENT" && !number) {
+      const year = new Date().getUTCFullYear();
+      const key = sequenceKey("quote", year);
+      const sequence = await tx.numberSequence.upsert({
+        where: { organizationId_key: { organizationId, key } },
+        create: { organizationId, key, next: 2 },
+        update: { next: { increment: 1 } },
+      });
+      number = formatDocumentNumber(quote.organization.quotePrefix, year, sequence.next - 1);
+    }
     const updated = await tx.quote.update({
       where: { id },
-      data: { status: nextStatus, ...(nextStatus === "ACCEPTED" || nextStatus === "REJECTED" ? { respondedAt: new Date() } : {}),
+      data: { status: nextStatus, number, ...(nextStatus === "ACCEPTED" || nextStatus === "REJECTED" ? { respondedAt: new Date() } : {}),
         events: { create: { userId: current.user.id, action: nextStatus.toLowerCase() } } },
       select: { id: true, number: true, status: true, respondedAt: true, updatedAt: true },
     });
     return { quote: updated };
-  });
+  }, { isolationLevel: "Serializable" }));
   if ("error" in result) {
     if (result.error === "NOT_FOUND") return NextResponse.json({ error: "Orçamento não encontrado." }, { status: 404 });
     if (result.error === "EXPIRED") return NextResponse.json({ error: "Este orçamento já ultrapassou a validade." }, { status: 409 });
