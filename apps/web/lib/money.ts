@@ -12,7 +12,7 @@ export const D = (v: Numeric | null | undefined): Decimal => new Decimal(v == nu
 export function parseMoneyInput(value: unknown): Decimal | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const text = String(value).trim();
-  if (!/^(?:0|[1-9]\\d{0,11})(?:\\.\\d{1,2})?$/.test(text)) return null;
+  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(text)) return null;
   try {
     const amount = D(text);
     return amount.isFinite() ? amount : null;
