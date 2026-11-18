@@ -47,7 +47,7 @@ export async function getCurrentSession() {
   const membership = session.activeOrganizationId
     ? await prisma.membership.findFirst({
         where: { userId: session.userId, organizationId: session.activeOrganizationId, status: "ACTIVE", organization: { status: "ACTIVE" } },
-        include: { organization: { select: { id: true, name: true, slug: true, currency: true, locale: true } } },
+        include: { organization: { select: { id: true, name: true, slug: true, currency: true, locale: true, timezone: true } } },
       })
     : null;
   return { session, user: session.user, membership };
