@@ -127,7 +127,7 @@ export async function POST(request: Request) {
         const currentPeriod = record(data.current_billing_period);
         const scheduledChange = record(data.scheduled_change);
         const periodEnd = dateOrNull(currentPeriod.ends_at);
-        const update: Prisma.SubscriptionUpdateManyMutationInput = {
+        const update: Prisma.SubscriptionUncheckedUpdateManyInput = {
           providerEventAt: occurredAt,
         };
 
