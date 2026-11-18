@@ -36,7 +36,8 @@ function config() {
 }
 
 export function isProxyPayConfigured(): boolean {
-  return Boolean(process.env.PROXYPAY_API_TOKEN && Number(process.env.PROXYPAY_POS_ID) > 0 &&\n    (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL)?.startsWith("https://"));
+  return Boolean(process.env.PROXYPAY_API_TOKEN && Number(process.env.PROXYPAY_POS_ID) > 0 &&
+    (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL)?.startsWith("https://"));
 }
 
 export async function createProxyPayCharge(input: {
