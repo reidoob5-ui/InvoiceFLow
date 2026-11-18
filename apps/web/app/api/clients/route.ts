@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof ForbiddenError) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
     throw error;
   }
+  const organizationId = current.membership.organizationId;
   const q = request.nextUrl.searchParams.get("q")?.trim().slice(0, 100) ?? "";
   const archived = request.nextUrl.searchParams.get("archived") === "true";
   const clients = await prisma.client.findMany({
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
   const execution = await withOrganizationPlanLimit(organizationId, "maxClients", 1, (tx) => tx.client.create({
     data: {
-      organizationId: current.membership.organizationId,
+      organizationId,
       type: body?.type === "INDIVIDUAL" ? "INDIVIDUAL" : "COMPANY",
       name, email: email || null,
       company: typeof body?.company === "string" ? body.company.trim().slice(0, 160) || null : null,
@@ -61,6 +62,6 @@ export async function POST(request: NextRequest) {
   }));
   if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
   const client = execution.value;
-  await audit({ action: "client.created", userId: current.user.id, organizationId: current.membership.organizationId, entityType: "Client", entityId: client.id });
+  await audit({ action: "client.created", userId: current.user.id, organizationId, entityType: "Client", entityId: client.id });
   return NextResponse.json({ client }, { status: 201 });
 }
