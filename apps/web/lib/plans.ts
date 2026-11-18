@@ -69,7 +69,7 @@ export function checkLimit(limits: PlanLimits, key: LimitKey, used: number, addi
 }
 
 export type SubscriptionState = {
-  status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED";
+  status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "PAUSED" | "CANCELED" | "EXPIRED";
   trialEndsAt?: Date | null;
   currentPeriodEnd?: Date | null;
   graceEndsAt?: Date | null;
@@ -77,7 +77,7 @@ export type SubscriptionState = {
 
 export function hasActiveAccess(sub: SubscriptionState, now = new Date()): boolean {
   switch (sub.status) {
-    case "ACTIVE": return true;
+    case "ACTIVE": return !sub.currentPeriodEnd || sub.currentPeriodEnd.getTime() > now.getTime();
     case "TRIALING": return !sub.trialEndsAt || sub.trialEndsAt.getTime() > now.getTime();
     case "PAST_DUE": return !!sub.graceEndsAt && sub.graceEndsAt.getTime() > now.getTime();
     case "CANCELED": return !!sub.currentPeriodEnd && sub.currentPeriodEnd.getTime() > now.getTime();
