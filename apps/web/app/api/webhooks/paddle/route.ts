@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { paddlePriceId, verifyPaddleWebhook } from "@/lib/payments/paddle";
+import { paddlePriceId, paddleSubscriptionStatus, verifyPaddleWebhook } from "@/lib/payments/paddle";
 
 export const runtime = "nodejs";
 
@@ -115,15 +115,15 @@ export async function POST(request: Request) {
           },
         });
       } else if (
-        (event.event_type === "subscription.canceled" || event.event_type === "subscription.updated") &&
-        typeof data.id === "string"
+        typeof data.id === "string" &&
+        paddleSubscriptionStatus(event.event_type!, data.status)
       ) {
         const existing = await tx.subscription.findFirst({
           where: { provider: "paddle", providerRef: data.id },
         });
         if (!existing || (existing.providerEventAt && existing.providerEventAt > occurredAt)) return;
 
-        const status = data.status;
+        const status = paddleSubscriptionStatus(event.event_type!, data.status)!;
         const currentPeriod = record(data.current_billing_period);
         const scheduledChange = record(data.scheduled_change);
         const periodEnd = dateOrNull(currentPeriod.ends_at);
