@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, checkPasswordStrength } from "@/lib/auth/password";
 import { createSession, audit } from "@/lib/auth/session";
 import { DEFAULT_PLANS } from "@/lib/plans";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -34,27 +34,30 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (existing) return NextResponse.json({ error: "Já existe uma conta com este e-mail. Entra na tua conta para aceitar o convite." }, { status: 409 });
 
-    if (invitation) {
-      const planLimit = await checkOrganizationPlanLimit(invitation.organizationId, "maxUsers", 0);
-      if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-    }
-
     const passwordHash = await hashPassword(password);
-    const user = await prisma.$transaction(async (tx) => {
-      const created = await tx.user.create({
-        data: { name, email, passwordHash },
-        select: { id: true, name: true, email: true },
-      });
-      if (invitation) {
+    let user: { id: string; name: string | null; email: string };
+    if (invitation) {
+      const execution = await withOrganizationPlanLimit(invitation.organizationId, "maxUsers", 0, async (tx) => {
         const fresh = await tx.invitation.findUnique({ where: { id: invitation.id } });
         if (!fresh || fresh.acceptedAt || fresh.expiresAt <= new Date()) throw new Error("INVITATION_ALREADY_USED");
+        const created = await tx.user.create({
+          data: { name, email, passwordHash },
+          select: { id: true, name: true, email: true },
+        });
         await tx.membership.create({
           data: { userId: created.id, organizationId: invitation.organizationId, role: invitation.role, status: "ACTIVE" },
         });
         await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
-      }
-      return created;
-    });
+        return created;
+      });
+      if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+      user = execution.value;
+    } else {
+      user = await prisma.$transaction((tx) => tx.user.create({
+        data: { name, email, passwordHash },
+        select: { id: true, name: true, email: true },
+      }));
+    }
 
     await createSession(user.id, invitation?.organizationId ?? null);
     await audit({
