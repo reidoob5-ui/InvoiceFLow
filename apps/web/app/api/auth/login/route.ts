@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
     await createSession(user.id, membership?.organizationId);
     await audit({ action: "auth.login", userId: user.id, organizationId: membership?.organizationId ?? null });
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email }, activeOrganizationId: membership?.organizationId ?? null });
-  } catch {
+  } catch (error) {
+    console.error("[login]", error instanceof Error ? `${error.name}: ${error.message}` : error);
     return NextResponse.json({ error: "Não foi possível iniciar sessão." }, { status: 500 });
   }
 }

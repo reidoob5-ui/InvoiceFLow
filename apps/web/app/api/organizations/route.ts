@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
       return org;
     });
     return NextResponse.json({ organization: { id: organization.id, name: organization.name, slug: organization.slug } }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("[organizations]", error instanceof Error ? `${error.name}: ${error.message}` : error);
     return NextResponse.json({ error: "Não foi possível criar a empresa." }, { status: 500 });
   }
 }

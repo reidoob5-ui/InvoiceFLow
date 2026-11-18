@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     await createSession(user.id);
     await audit({ action: "auth.register", userId: user.id, entityType: "User", entityId: user.id });
     return NextResponse.json({ user }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("[register]", error instanceof Error ? `${error.name}: ${error.message}` : error);
     return NextResponse.json({ error: "Não foi possível concluir o registo." }, { status: 500 });
   }
 }
