@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Decimal from "decimal.js";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Calculator, CircleHelp, Download, Lightbulb, ShieldCheck, Target, Wallet } from "lucide-react";
+import { ArrowRight, Calculator, CircleHelp, Download, Lightbulb, ShieldCheck, Target, Wallet } from "lucide-react";
 
 type Currency = "AOA" | "USD" | "EUR" | "GBP";
 const initial = { currency: "AOA" as Currency, capital: "500000", fixed: "120000", variable: "2500", price: "7500", units: "30", ownerPay: "100000" };
