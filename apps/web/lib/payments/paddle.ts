@@ -17,7 +17,6 @@ export async function createPaddleCheckout(input: {
   organizationId: string;
   planKey: string;
   interval: "MONTHLY" | "YEARLY";
-  email?: string;
 }): Promise<string> {
   const apiKey = process.env.PADDLE_API_KEY;
   if (!apiKey) throw new Error("Paddle is not configured. Set PADDLE_API_KEY.");
@@ -33,7 +32,6 @@ export async function createPaddleCheckout(input: {
         planKey: input.planKey,
         interval: input.interval,
       },
-      ...(input.email ? { customer: { email: input.email } } : {}),
     }),
     cache: "no-store",
   });
