@@ -12,7 +12,7 @@ export default function LoginPage() {
     try {
       const response = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password, code }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível iniciar sessão.");
-      router.push(data.activeOrganizationId ? "/" : "/onboarding");
+      router.push(data.activeOrganizationId ? "/dashboard" : "/onboarding");
     } catch (err) { setError(err instanceof Error ? err.message : "Erro inesperado."); } finally { setBusy(false); }
   }
   return <main className="flex min-h-screen items-center justify-center px-5 py-12"><form onSubmit={submit} className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl">
