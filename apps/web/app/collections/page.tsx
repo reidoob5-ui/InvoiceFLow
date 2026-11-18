@@ -4,7 +4,7 @@ import { MessageCircle, Mail, CalendarClock, AlertTriangle, CheckCircle2, ArrowR
 import { prisma } from "@/lib/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { can } from "@/lib/permissions";
-import { D, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 const DAY = 24 * 60 * 60 * 1000;
 function phoneForWhatsApp(value: string | null) {
@@ -75,9 +75,6 @@ export default async function CollectionsPage() {
 
   const overdue = items.filter(item => item.days < 0);
   const upcoming = items.filter(item => item.days >= 0);
-  const grouped = new Map<string, D>();
-  for (const item of items) grouped.set(item.currency, (grouped.get(item.currency) || D(0)).plus(D(item.balance.replace(/[^0-9,.-]/g, "").replace(",", "."))));
-  // Totals above are only a visual count by currency; the individual invoice balances remain authoritative.
   const currencyTotals = Array.from(new Set(items.map(item => item.currency))).map(currency => ({
     currency,
     count: items.filter(item => item.currency === currency).length,
