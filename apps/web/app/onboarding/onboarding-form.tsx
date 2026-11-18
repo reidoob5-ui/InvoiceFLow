@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2, Sparkles } from "lucide-react";
-const planNames:Record<string,string>={free:"Gratuito",pro:"Pro",business:"Business"};\nconst planPrices:Record<string,string>={free:"Sem custos",pro:"19.000 Kz / mês",business:"32.000 Kz / mês"};
+const planNames:Record<string,string>={free:"Gratuito",pro:"Pro",business:"Business"};
+const planPrices:Record<string,string>={free:"Sem custos",pro:"19.000 Kz / mês",business:"32.000 Kz / mês"};
 export default function OnboardingForm({planKey}:{planKey:string}){
  const router=useRouter();const [name,setName]=useState("");const [error,setError]=useState("");const [busy,setBusy]=useState(false);
  async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setBusy(true);setError("");try{
