@@ -17,7 +17,17 @@ export default function HomePage(){
     <div className="hidden items-center gap-8 text-sm text-slate-300 md:flex"><a href="#funcionalidades" className="hover:text-white">Funcionalidades</a><a href="#como-funciona" className="hover:text-white">Como funciona</a><Link href="/plans" className="hover:text-white">Planos</Link></div>
     <div className="flex items-center gap-2"><Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white">Entrar</Link><Link href="/plans" className="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-100">Começar agora <ArrowUpRight className="ml-1 inline" size={15}/></Link></div>
    </nav>
-   <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pb-32 lg:pt-20">
+   <div className="mx-auto max-w-7xl px-5 pt-2 sm:px-8">
+    <div className="hero-image-reveal group relative isolate flex min-h-[150px] items-end overflow-hidden rounded-[1.7rem] border border-white/15 bg-[url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85')] bg-cover bg-center shadow-[0_22px_70px_rgba(0,0,0,.35)] sm:min-h-[190px]">
+     <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080d18]/95 via-[#080d18]/65 to-[#080d18]/10"/>
+     <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080d18]/65 via-transparent to-transparent"/>
+     <div className="relative flex w-full flex-col gap-3 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
+      <div><span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-100"><Sparkles size={12}/> Um espaço para crescer</span><p className="mt-3 max-w-xl text-xl font-semibold tracking-tight text-white sm:text-2xl">Toda a gestão do teu negócio, num só lugar.</p><p className="mt-1 text-xs text-slate-300 sm:text-sm">Organização, clareza e controlo em cada movimento.</p></div>
+      <div className="hidden items-center gap-2 rounded-2xl border border-white/15 bg-[#0b1220]/65 px-4 py-3 text-xs font-semibold text-white backdrop-blur-xl sm:flex"><span className="grid h-8 w-8 place-items-center rounded-xl bg-indigo-400/20 text-indigo-100"><BarChart3 size={17}/></span> Gestão em tempo real</div>
+     </div>
+    </div>
+   </div>
+   <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-12 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pb-32 lg:pt-16">
     <div className="relative z-10"><div className="mb-7 inline-flex items-center gap-2 rounded-full border border-indigo-300/20 bg-indigo-400/10 px-4 py-2 text-xs font-semibold text-indigo-200"><Sparkles size={14}/> A nova forma de gerir o teu negócio</div>
      <h1 className="max-w-3xl text-5xl font-semibold leading-[1.06] tracking-[-.055em] sm:text-6xl lg:text-[4.4rem]">As tuas finanças.<br/><span className="bg-gradient-to-r from-indigo-300 via-violet-300 to-cyan-200 bg-clip-text text-transparent">Finalmente em fluxo.</span></h1>
      <p className="mt-7 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">Facturas, clientes, pagamentos e controlo financeiro numa plataforma simples, elegante e preparada para acompanhar o crescimento da tua empresa.</p>
