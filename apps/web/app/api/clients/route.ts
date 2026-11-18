@@ -37,12 +37,13 @@ export async function POST(request: NextRequest) {
     if (error instanceof ForbiddenError) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
     throw error;
   }
+  const organizationId = current.membership.organizationId;
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 160) : "";
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase().slice(0, 254) : "";
   if (name.length < 2) return NextResponse.json({ error: "O nome deve ter pelo menos 2 caracteres." }, { status: 400 });
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
-  const execution = await withOrganizationPlanLimit(current.membership.organizationId, "maxClients", 1, (tx) => tx.client.create({
+  const execution = await withOrganizationPlanLimit(organizationId, "maxClients", 1, (tx) => tx.client.create({
     data: {
       organizationId: current.membership.organizationId,
       type: body?.type === "INDIVIDUAL" ? "INDIVIDUAL" : "COMPANY",
