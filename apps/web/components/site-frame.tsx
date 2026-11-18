@@ -19,6 +19,7 @@ const navigation = [
   { href: "/bills", label: "Contas a pagar", icon: WalletCards, description: "Controla facturas de fornecedores, vencimentos e pagamentos.", accent: "from-amber-300 to-yellow-500" },
   { href: "/taxes", label: "Impostos e taxas", icon: ReceiptText, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, description: "Analisa o fluxo de caixa, despesas e saldos financeiros.", accent: "from-sky-300 to-cyan-500" },
+  { href: "/team", label: "Equipa e acessos", icon: Users, description: "Gere membros, perfis de acesso e convites para a tua empresa.", accent: "from-cyan-300 to-blue-500" },
   { href: "/billing", label: "Plano e subscrição", icon: CreditCard, description: "Consulta o teu plano, limites e estado da subscrição.", accent: "from-indigo-300 to-violet-500" },
 ];
 
