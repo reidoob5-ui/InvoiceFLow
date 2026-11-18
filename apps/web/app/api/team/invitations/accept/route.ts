@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -20,11 +20,8 @@ export async function POST(request: NextRequest) {
   if (invitation.email.toLowerCase() !== current.user.email.toLowerCase())
     return NextResponse.json({ error: "Entra com a conta cujo e-mail recebeu este convite." }, { status: 403 });
 
-  const planLimit = await checkOrganizationPlanLimit(invitation.organizationId, "maxUsers", 0);
-  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-
   try {
-    await prisma.$transaction(async (tx) => {
+    const execution = await withOrganizationPlanLimit(invitation.organizationId, "maxUsers", 0, async (tx) => {
       const fresh = await tx.invitation.findUnique({ where: { id: invitation.id } });
       if (!fresh || fresh.acceptedAt || fresh.expiresAt <= new Date()) throw new Error("INVITATION_ALREADY_USED");
       await tx.membership.upsert({
@@ -35,6 +32,7 @@ export async function POST(request: NextRequest) {
       await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
       await tx.session.update({ where: { id: current.session.id }, data: { activeOrganizationId: invitation.organizationId } });
     });
+    if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
     await audit({
       action: "team.invitation_accepted", userId: current.user.id, organizationId: invitation.organizationId,
       entityType: "Invitation", entityId: invitation.id,
