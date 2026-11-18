@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
+import { formatDocumentNumber, sequenceKey } from "@/lib/numbering";
+import { retryOnConflict } from "@/lib/tx-retry";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };
@@ -35,8 +37,8 @@ export async function PATCH(request: NextRequest, context: Context) {
   const nextStatus = body?.status;
   if (!["SENT", "ACCEPTED", "REJECTED", "EXPIRED"].includes(nextStatus)) return NextResponse.json({ error: "Estado inválido." }, { status: 400 });
   const organizationId = current.membership.organizationId;
-  const result = await prisma.$transaction(async (tx) => {
-    const quote = await tx.quote.findFirst({ where: { id, organizationId }, select: { id: true, status: true, validUntil: true } });
+  const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+    const quote = await tx.quote.findFirst({ where: { id, organizationId }, include: { organization: { select: { quotePrefix: true } } } });
     if (!quote) return { error: "NOT_FOUND" as const };
     const transitions: Record<string, string[]> = {
       DRAFT: ["SENT"], SENT: ["ACCEPTED", "REJECTED", "EXPIRED"], ACCEPTED: [], REJECTED: [], EXPIRED: [], CONVERTED: [],
@@ -47,7 +49,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       where: { id },
       data: { status: nextStatus, ...(nextStatus === "ACCEPTED" || nextStatus === "REJECTED" ? { respondedAt: new Date() } : {}),
         events: { create: { userId: current.user.id, action: nextStatus.toLowerCase() } } },
-      select: { id: true, status: true, respondedAt: true, updatedAt: true },
+      select: { id: true, number: true, status: true, respondedAt: true, updatedAt: true },
     });
     return { quote: updated };
   });
