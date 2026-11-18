@@ -61,7 +61,7 @@ export default function ReportsPage() {
   const currencies = useMemo(() => data?.summary.map(item => item.currency) ?? [], [data]);
   const visibleSummary = useMemo(() => (data?.summary ?? []).filter(item => currency === "ALL" || item.currency === currency), [data, currency]);
   const chartData = useMemo(() => {
-    const rows = (data?.timeline ?? []).filter(item => currency === "ALL" || item.currency === currency);
+    const rows = (data?.timeline ?? []).filter(item => currency !== "ALL" && item.currency === currency);
     const months = [...new Set(rows.map(item => item.month))].sort();
     return months.map(month => {
       const items = rows.filter(item => item.month === month);
@@ -143,7 +143,7 @@ export default function ReportsPage() {
           <section className="rounded-2xl border border-white/10 bg-slate-900/65 p-5">
             <h2 className="font-semibold">Fluxo de caixa mensal</h2><p className="mt-1 text-xs text-slate-500">Entradas confirmadas e saídas efectivamente pagas.</p>
             <div className="mt-5 h-72">
-              {chartData.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              {currency === "ALL" ? <div className="grid h-full place-items-center text-center text-sm text-slate-500">Selecciona uma moeda para visualizar o gráfico sem misturar unidades monetárias.</div> : chartData.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#263246"/>
                 <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false}/>
@@ -153,7 +153,7 @@ export default function ReportsPage() {
                 <Bar dataKey="outflows" name="Saídas" fill="#fb7185" radius={[5,5,0,0]}/>
               </BarChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-sm text-slate-500">Sem movimentos de caixa no período.</div>}
             </div>
-            {currency === "ALL" && <p className="mt-2 text-[10px] text-amber-300/80">Para comparar montantes no gráfico, selecciona uma moeda específica.</p>}
+            
           </section>
           <section className="rounded-2xl border border-white/10 bg-slate-900/65 p-5">
             <h2 className="font-semibold">Despesas por categoria</h2><p className="mt-1 text-xs text-slate-500">Despesas pagas, agrupadas por moeda.</p>
