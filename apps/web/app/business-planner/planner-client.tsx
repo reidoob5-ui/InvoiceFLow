@@ -117,7 +117,7 @@ export default function BusinessPlannerPage({ cashMovements }: { cashMovements: 
             <div className="rounded-xl border border-white/[.07] bg-white/[.025] p-4"><p className="text-xs text-slate-500">Limite de despesa extra</p><p className="mt-2 text-xl font-semibold">{money(result.safeToSpend, currency)}</p><p className="mt-1 text-[11px] text-slate-500">Depois de proteger a reserva</p></div>
           </div>
           {!validPrice && <p role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/[.06] p-3 text-xs leading-5 text-rose-200">O preço de venda deve ser superior ao custo variável por unidade. Caso contrário, cada venda aumenta o prejuízo.</p>}
-          {result.fixed.plus(result.ownerPay).gt(result.capital) && <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-xs leading-5 text-amber-100">Atenção: o capital disponível não cobre sequer um mês de custos fixos e retirada previstos.</p>}
+          {result.monthlyOperatingCost.gt(result.capital) && <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-xs leading-5 text-amber-100">Atenção: o capital disponível não cobre sequer um mês dos custos operacionais estimados, incluindo custos variáveis e retirada.</p>}
         </div>
 
         <div className="rounded-2xl border border-indigo-300/15 bg-gradient-to-br from-indigo-500/10 to-cyan-500/[.04] p-5">
