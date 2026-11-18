@@ -4,21 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Quote = { id: string; number: string | null; title: string | null; status: string; currency: string; total: string; issueDate: string | null; validUntil: string | null; createdAt: string; client: { name: string } };
-type Client = { id: string; name: string };
+type Client = { id: string; name: string };\ntype Tax = { id: string; name: string; rate: string };
 const labels: Record<string,string> = { DRAFT:"Rascunho", SENT:"Enviado", ACCEPTED:"Aceite", REJECTED:"Rejeitado", EXPIRED:"Expirado", CONVERTED:"Convertido" };
 
 export default function QuotesPage() {
   const [quotes,setQuotes] = useState<Quote[]>([]);
-  const [clients,setClients] = useState<Client[]>([]);
+  const [clients,setClients] = useState<Client[]>([]);\n  const [taxes,setTaxes] = useState<Tax[]>([]);
   const [show,setShow] = useState(false);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState("");
-  const [form,setForm] = useState({ clientId:"", title:"", currency:"AOA", validUntil:"", notes:"", description:"", quantity:"1", unitPrice:"", taxRate:"0", discountPercent:"0" });
+  const [form,setForm] = useState({ clientId:"", title:"", currency:"AOA", validUntil:"", notes:"", description:"", quantity:"1", unitPrice:"", taxRateId:"", discountPercent:"0" });
   const load = useCallback(async () => {
     const [qr,cr] = await Promise.all([fetch("/api/quotes"),fetch("/api/clients")]);
     const qd = await qr.json(), cd = await cr.json();
     if (qr.ok) setQuotes(qd.quotes ?? []); else setError(qd.error ?? "Falha ao carregar orçamentos.");
-    if (cr.ok) setClients(cd.clients ?? []);
+    if (cr.ok) setClients(cd.clients ?? []);\n    if (tr.ok) setTaxes((td.taxes ?? []).filter((tax: Tax) => tax.id));
   },[]);
   useEffect(()=>{ void load(); },[load]);
 
@@ -27,11 +27,11 @@ export default function QuotesPage() {
     try {
       const response = await fetch("/api/quotes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
         clientId:form.clientId,title:form.title,currency:form.currency,validUntil:form.validUntil || null,notes:form.notes,
-        lines:[{description:form.description,quantity:form.quantity,unitPrice:form.unitPrice,taxRate:form.taxRate,discountPercent:form.discountPercent}],
+        lines:[{description:form.description,quantity:form.quantity,unitPrice:form.unitPrice,taxRateId:form.taxRateId,discountPercent:form.discountPercent}],
       })});
       const data = await response.json();
       if(!response.ok) throw new Error(data.error || "Não foi possível criar o orçamento.");
-      setShow(false); setForm({clientId:"",title:"",currency:"AOA",validUntil:"",notes:"",description:"",quantity:"1",unitPrice:"",taxRate:"0",discountPercent:"0"});
+      setShow(false); setForm({clientId:"",title:"",currency:"AOA",validUntil:"",notes:"",description:"",quantity:"1",unitPrice:"",taxRateId:"",discountPercent:"0"});
       await load();
     } catch (err) { setError(err instanceof Error ? err.message : "Erro inesperado."); }
     finally { setBusy(false); }
