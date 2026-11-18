@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { calculatePreparedLines, InvoiceInputError, prepareInvoiceLines } from "@/lib/invoices";
+import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   const organizationId = current.membership.organizationId;
+  const planLimit = await checkOrganizationPlanLimit(organizationId, "maxInvoicesPerMonth");
+  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
   const clientId = typeof body.clientId === "string" ? body.clientId : "";
   const client = await prisma.client.findFirst({ where: { id: clientId, organizationId, archivedAt: null } });
   if (!client) return NextResponse.json({ error: "Selecciona um cliente activo desta empresa." }, { status: 400 });
