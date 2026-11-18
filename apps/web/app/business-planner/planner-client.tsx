@@ -11,7 +11,7 @@ type Currency = "AOA" | "USD" | "EUR" | "GBP";
 type CashMovement = { currency: string; received: string; expenses: string; suppliers: string; net: string | null };
 const initial = { currency: "AOA" as Currency, capital: "500000", fixed: "120000", variable: "2500", price: "7500", units: "30", ownerPay: "100000", targetProfit: "100000", reserveMonths: "2" };
 
-function money(value: Decimal, currency: Currency) {
+function money(value: Decimal, currency: string) {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency, maximumFractionDigits: currency === "AOA" ? 0 : 2 }).format(value.toDecimalPlaces(currency === "AOA" ? 0 : 2, Decimal.ROUND_HALF_UP).toNumber());
 }
 function Field({ label, hint, value, onChange, prefix, min = "0" }: { label: string; hint: string; value: string; onChange: (v: string) => void; prefix?: string; min?: string }) {
