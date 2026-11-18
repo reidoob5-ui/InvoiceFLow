@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { retryOnConflict } from "@/lib/tx-retry";
+import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   }
   const { id } = await context.params;
   const organizationId = current.membership.organizationId;
+  const planLimit = await checkOrganizationPlanLimit(organizationId, "maxInvoicesPerMonth");
+  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
   const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const quote = await tx.quote.findFirst({ where: { id, organizationId }, include: { lines: { orderBy: { position: "asc" } } } });
     if (!quote) return { error: "NOT_FOUND" as const };
