@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, canAssignRole, ForbiddenError, type Role, ROLES } from "@/lib/permissions";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -71,15 +71,14 @@ export async function POST(request: NextRequest) {
   });
   if (duplicate) return NextResponse.json({ error: "Já existe um convite pendente para este e-mail." }, { status: 409 });
 
-  const planLimit = await checkOrganizationPlanLimit(organizationId, "maxUsers");
-  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const invitation = await prisma.invitation.create({
+  const execution = await withOrganizationPlanLimit(organizationId, "maxUsers", 1, (tx) => tx.invitation.create({
     data: { organizationId, email, role, tokenHash: hashToken(token), invitedById: current.user.id, expiresAt },
     select: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
-  });
+  }));
+  if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+  const invitation = execution.value;
   await audit({
     action: "team.invitation_created", userId: current.user.id, organizationId,
     entityType: "Invitation", entityId: invitation.id, metadata: { email, role },
