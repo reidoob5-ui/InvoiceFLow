@@ -39,7 +39,7 @@ jobs:
             const l = require("./package-lock.json");
             for (const section of ["dependencies", "devDependencies"]) {
               for (const [name, wanted] of Object.entries(p[section] || {})) {
-                const locked = l.packages[""].[section]?.[name];
+                const locked = l.packages[""][section]?.[name];
                 if (locked !== wanted) console.log("LOCK DRIFT:", section, name, "package.json=", wanted, "package-lock.json=", locked);
               }
             }
