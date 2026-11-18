@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot
 } from "lucide-react";
 
 const navigation = [
@@ -19,12 +19,21 @@ const navigation = [
   { href: "/suppliers", label: "Fornecedores", icon: Truck, description: "Mantém fornecedores e parceiros sempre organizados.", accent: "from-emerald-300 to-teal-500" },
   { href: "/expenses", label: "Despesas", icon: ReceiptText, description: "Regista custos e acompanha valores pagos e pendentes.", accent: "from-rose-300 to-pink-500" },
   { href: "/bills", label: "Contas a pagar", icon: WalletCards, description: "Controla facturas de fornecedores, vencimentos e pagamentos.", accent: "from-amber-300 to-yellow-500" },
-  { href: "/taxes", label: "Impostos e taxas", icon: ReceiptText, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
+  { href: "/taxes", label: "Impostos e taxas", icon: Percent, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, description: "Analisa o fluxo de caixa, despesas e saldos financeiros.", accent: "from-sky-300 to-cyan-500" },
+  { href: "/ai", label: "InvoiceFlow AI", icon: Bot, description: "Pergunta ao assistente sobre recebimentos, atrasos e mensagens de cobrança.", accent: "from-indigo-300 to-cyan-400" },
   { href: "/insights", label: "Inteligência financeira", icon: Lightbulb, description: "Identifica riscos, vencimentos e acções prioritárias a partir dos teus registos.", accent: "from-amber-200 to-orange-400" },
   { href: "/team", label: "Equipa e acessos", icon: Users, description: "Gere membros, perfis de acesso e convites para a tua empresa.", accent: "from-cyan-300 to-blue-500" },
   { href: "/billing", label: "Plano e subscrição", icon: CreditCard, description: "Consulta o teu plano, limites e estado da subscrição.", accent: "from-indigo-300 to-violet-500" },
   { href: "/settings", label: "Definições da empresa", icon: Settings, description: "Actualiza os dados legais, fiscais, regionais e os documentos da tua organização.", accent: "from-sky-300 to-indigo-500" },
+];
+
+const groups: { title: string; hrefs: string[] }[] = [
+  { title: "Principal", hrefs: ["/dashboard", "/ai", "/insights"] },
+  { title: "Vendas", hrefs: ["/invoices", "/quotes", "/collections", "/clients", "/products"] },
+  { title: "Compras", hrefs: ["/expenses", "/bills", "/suppliers"] },
+  { title: "Análise", hrefs: ["/reports", "/business-planner", "/taxes"] },
+  { title: "Conta", hrefs: ["/team", "/billing", "/settings"] },
 ];
 
 const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept"];
@@ -36,8 +45,18 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [identity, setIdentity] = useState<{ name: string; org: string } | null>(null);
 
   const isPublic = publicPaths.some(path => pathname === path || (path !== "/" && pathname.startsWith(path + "/")));
+  useEffect(() => {
+    if (isPublic) return;
+    let alive = true;
+    fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).then(d => {
+      if (alive && d?.user) setIdentity({ name: d.user.name || d.user.email, org: d.activeOrganization?.name || "" });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [isPublic]);
+
   if (isPublic) return <>{children}</>;
 
   async function logout() {
@@ -63,7 +82,6 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-clip bg-[#080d18] text-slate-100">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-[.055]"/>
         <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(8,13,24,.97),rgba(8,13,24,.91)_48%,rgba(8,13,24,.97))]"/>
         <div className="absolute -left-44 top-24 h-[420px] w-[420px] rounded-full bg-indigo-600/10 blur-[130px]"/>
         <div className="absolute -right-40 top-[38%] h-[420px] w-[420px] rounded-full bg-cyan-500/[.07] blur-[140px]"/>
@@ -81,29 +99,28 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
           <button onClick={() => setMobileOpen(false)} aria-label="Fechar menu" className="rounded-lg p-2 text-slate-400 hover:bg-white/10 lg:hidden"><X size={18}/></button>
         </div>
 
-        {!collapsed && <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-slate-500">Espaço de trabalho</p>}
-        <nav aria-label="Navegação principal" className="flex-1 space-y-1.5">
-          {navigation.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
-            return <Link key={href} href={href} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20 shadow-lg shadow-indigo-950/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}`}>
-              <Icon size={19} strokeWidth={1.8} className={`transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 ${active ? "text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,.65)]" : "text-slate-500 group-hover:text-slate-200"}`}/>
-              {!collapsed && <span>{label}</span>}
-              {active && !collapsed && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-[0_0_10px_#a5b4fc]"/>}
-            </Link>;
-          })}
+        <nav aria-label="Navegação principal" className="flex-1 space-y-4 overflow-y-auto pr-1">
+          {groups.map(group => <div key={group.title}>
+            {!collapsed && <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-slate-500">{group.title}</p>}
+            <div className="space-y-1">
+              {group.hrefs.map(href => navigation.find(n => n.href === href)).filter((n): n is typeof navigation[number] => !!n).map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href + "/");
+                return <Link key={href} href={href} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}`}>
+                  <Icon size={18} strokeWidth={1.8} className={active ? "text-indigo-300" : "text-slate-500 group-hover:text-slate-200"}/>
+                  {!collapsed && <span>{label}</span>}
+                  {href === "/ai" && !collapsed && <span className="ml-auto rounded-full bg-indigo-400/20 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-indigo-200">Novo</span>}
+                  {active && !collapsed && href !== "/ai" && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300"/>}
+                </Link>;
+              })}
+            </div>
+          </div>)}
         </nav>
-
-        {!collapsed && <div className="mb-4 rounded-2xl border border-indigo-400/15 bg-gradient-to-br from-indigo-500/10 to-cyan-500/[.04] p-4">
-          <div className="mb-2 flex items-center gap-2 text-indigo-200"><Sparkles size={15}/><span className="text-xs font-semibold">InvoiceFlow AI</span><span className="ml-auto rounded-full border border-indigo-300/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-indigo-200">Em breve</span></div>
-          <p className="text-[11px] leading-5 text-slate-400">Uma experiência financeira mais clara, com ferramentas inteligentes a caminho.</p>
-          <Link href="/plans" className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 hover:text-white">Conhecer os planos <CreditCard size={12}/></Link>
-        </div>}
 
         <div className="border-t border-white/[.08] pt-4">
           {!collapsed && <div className="mb-3 flex items-center gap-3 rounded-xl px-2 py-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xs font-bold text-slate-200">IF</span>
-            <span className="min-w-0"><span className="block truncate text-xs font-semibold text-slate-200">A tua conta</span><span className="block text-[10px] text-slate-500">Sessão protegida</span></span>
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 text-xs font-bold text-slate-200">{(identity?.name || "IF").slice(0, 2).toUpperCase()}</span>
+            <span className="min-w-0"><span className="block truncate text-xs font-semibold text-slate-200">{identity?.name || "A tua conta"}</span><span className="block truncate text-[10px] text-slate-500">{identity?.org || "Sessão protegida"}</span></span>
           </div>}
           {logoutError && !collapsed && <p role="alert" className="mb-2 rounded-lg bg-rose-500/10 p-2 text-[10px] text-rose-300">{logoutError}</p>}
           <button onClick={logout} disabled={signingOut} title={collapsed ? "Terminar sessão" : undefined}
@@ -130,7 +147,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
             </span>
             <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">InvoiceFlow · Espaço de trabalho</p><p className="truncate text-sm font-semibold text-slate-100">{pageTitle}</p><p className="hidden max-w-[520px] truncate text-[10px] text-slate-500 sm:block">{activePage?.description || "As ferramentas do teu negócio, sempre à mão."}</p></div>
           </div>
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"/><span className="text-[10px] font-medium text-emerald-200">Workspace activo</span></div>
+          <div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 sm:flex" title="Empresa activa"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/><span className="max-w-[200px] truncate text-[10px] font-medium text-emerald-200">{identity?.org || "Empresa"}</span></div>
         </header>
         <div className="animate-[page-enter_.42s_ease-out_both] px-4 pb-12 pt-5 sm:px-7 lg:px-9">{children}</div>
       </div>

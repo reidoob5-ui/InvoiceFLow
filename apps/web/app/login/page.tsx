@@ -17,13 +17,13 @@ export default function LoginPage() {
     }catch(err){setError(err instanceof Error?err.message:"Erro inesperado.");}finally{setBusy(false);}
   }
   return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b14] px-5 py-12 text-white">
-    <div className="pointer-events-none absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center opacity-[.12]"/>
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(99,102,241,.25),transparent_55%)] opacity-[.12]"/>
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,rgba(7,11,20,.98),rgba(7,11,20,.84),rgba(7,11,20,.96))]"/>
     <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-indigo-600/20 blur-[120px]"/>
     <div className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-cyan-500/10 blur-[120px]"/>
     <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#101827]/80 shadow-2xl shadow-black/60 backdrop-blur-2xl lg:grid-cols-[1fr_.9fr]">
       <div className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden border-r border-white/10 p-10 lg:flex">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1200&q=85')] bg-cover bg-center opacity-20"/>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(99,102,241,.25),transparent_55%)] opacity-20"/>
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-[#0b1220]/75 to-cyan-950/60"/>
         <div className="relative"><Link href="/" className="inline-flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 via-violet-500 to-cyan-400 text-xl font-black">I</span><span className="text-lg font-bold">InvoiceFlow</span></Link></div>
         <div className="relative"><span className="mb-5 inline-flex items-center gap-2 rounded-full border border-indigo-200/20 bg-indigo-300/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[.2em] text-indigo-100"><Sparkles size={13}/> Finance, in motion</span><h2 className="max-w-md text-4xl font-semibold leading-tight">O teu negócio merece uma visão mais clara.</h2><p className="mt-5 max-w-sm text-sm leading-7 text-slate-300">Facturação, clientes e recebimentos reunidos num espaço feito para simplificar o teu dia.</p></div>

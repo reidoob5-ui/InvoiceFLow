@@ -109,3 +109,26 @@ export function planLimitResponse(result: Exclude<PlanLimitResult, { allowed: tr
     used: result.used,
   };
 }
+
+export type AiQuota = { allowed: boolean; reason?: "NO_AI_IN_PLAN" | "LIMIT_REACHED" | "SUBSCRIPTION_INACTIVE"; limit: number | null; used: number; planName: string };
+
+/** Monthly AI quota: counts the user's messages sent this month across the organization. */
+export async function checkAiQuota(organizationId: string): Promise<AiQuota> {
+  const subscription = await prisma.subscription.findUnique({
+    where: { organizationId },
+    include: { plan: { select: { name: true, limits: true } } },
+  });
+  const fallback = DEFAULT_PLANS.find((plan) => plan.key === "free")!;
+  const limits = asLimits(subscription?.plan.limits, fallback.limits);
+  const planName = subscription?.plan.name ?? fallback.name;
+  const limit = limits.aiMessagesPerMonth;
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const used = await prisma.aiMessage.count({
+    where: { role: "user", createdAt: { gte: start }, conversation: { organizationId } },
+  });
+  if (subscription && !hasActiveAccess(subscription)) return { allowed: false, reason: "SUBSCRIPTION_INACTIVE", limit, used, planName };
+  if (limit === 0) return { allowed: false, reason: "NO_AI_IN_PLAN", limit, used, planName };
+  if (limit !== null && used >= limit) return { allowed: false, reason: "LIMIT_REACHED", limit, used, planName };
+  return { allowed: true, limit, used, planName };
+}

@@ -15,7 +15,7 @@ export default function OnboardingForm({planKey}:{planKey:string}){
   router.push("/dashboard");router.refresh();
  }catch(err){setError(err instanceof Error?err.message:"Erro inesperado.");}finally{setBusy(false);}}
  return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b14] px-5 py-12 text-white">
-  <div className="pointer-events-none absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=80')] bg-cover bg-center opacity-[.11]"/><div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#070b14]/95 via-[#070b14]/80 to-[#070b14]/95"/><div className="pointer-events-none absolute -right-24 top-0 h-96 w-96 rounded-full bg-violet-600/20 blur-[120px]"/>
+  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(99,102,241,.25),transparent_55%)] opacity-[.11]"/><div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#070b14]/95 via-[#070b14]/80 to-[#070b14]/95"/><div className="pointer-events-none absolute -right-24 top-0 h-96 w-96 rounded-full bg-violet-600/20 blur-[120px]"/>
   <form onSubmit={submit} className="relative w-full max-w-lg rounded-[2rem] border border-white/10 bg-[#101827]/90 p-8 shadow-2xl backdrop-blur-2xl sm:p-10">
    <Link href="/" className="mb-8 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white"><ArrowLeft size={14}/> Página inicial</Link>
    <span className="mb-6 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-cyan-400 text-white"><Building2 size={23}/></span>
