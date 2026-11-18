@@ -33,7 +33,11 @@ export async function checkOrganizationPlanLimit(
   let used = 0;
 
   if (key === "maxUsers") {
-    used = await prisma.membership.count({ where: { organizationId, status: "ACTIVE" } });
+    const [activeMembers, pendingInvitations] = await Promise.all([
+      prisma.membership.count({ where: { organizationId, status: "ACTIVE" } }),
+      prisma.invitation.count({ where: { organizationId, acceptedAt: null, expiresAt: { gt: new Date() } } }),
+    ]);
+    used = activeMembers + pendingInvitations;
   } else if (key === "maxClients") {
     used = await prisma.client.count({ where: { organizationId, archivedAt: null } });
   } else {
