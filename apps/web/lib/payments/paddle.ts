@@ -9,7 +9,9 @@ export function paddlePriceId(planKey: string, interval: "MONTHLY" | "YEARLY"): 
 }
 
 export function isPaddleConfigured(): boolean {
-  return Boolean(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET &&\n    process.env.PADDLE_PRICE_PRO_MONTHLY && process.env.PADDLE_PRICE_PRO_YEARLY &&\n    process.env.PADDLE_PRICE_BUSINESS_MONTHLY && process.env.PADDLE_PRICE_BUSINESS_YEARLY);
+  return Boolean(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET &&
+    process.env.PADDLE_PRICE_PRO_MONTHLY && process.env.PADDLE_PRICE_PRO_YEARLY &&
+    process.env.PADDLE_PRICE_BUSINESS_MONTHLY && process.env.PADDLE_PRICE_BUSINESS_YEARLY);
 }
 
 export async function createPaddleCheckout(input: {
