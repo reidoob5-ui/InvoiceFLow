@@ -8,6 +8,19 @@ export type Numeric = Decimal | string | number | { toString(): string };
 
 export const D = (v: Numeric | null | undefined): Decimal => new Decimal(v == null ? 0 : v.toString());
 
+/** Parse a monetary input without floating-point conversion or silent rounding. */
+export function parseMoneyInput(value: unknown): Decimal | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const text = String(value).trim();
+  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(text)) return null;
+  try {
+    const amount = D(text);
+    return amount.isFinite() ? amount : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Round to 2 decimal places, half-up (standard commercial rounding). */
 export const round2 = (v: Numeric): Decimal => D(v).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 

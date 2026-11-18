@@ -10,6 +10,7 @@ import { findRate, convert } from "@/lib/fx";
 import { checkLimit, hasActiveAccess, applyCoupon, DEFAULT_PLANS } from "@/lib/plans";
 import { csvCell, toCsv, parseCsv } from "@/lib/csv";
 import { t, dictionaryKeys, LOCALES } from "@/lib/i18n";
+import { parseMoneyInput } from "@/lib/money";
 
 describe("invoice totals", () => {
   it("avoids floating point errors (0.1 + 0.2 style)", () => {
@@ -290,5 +291,23 @@ describe("i18n", () => {
   it("all locales define the same keys", () => {
     const base = dictionaryKeys("pt").sort();
     for (const l of LOCALES) expect(dictionaryKeys(l).sort()).toEqual(base);
+  });
+});
+
+describe("strict monetary input parsing", () => {
+  it("accepts valid positive amounts and zero-valued taxes", () => {
+    expect(parseMoneyInput("1250.50")?.toFixed(2)).toBe("1250.50");
+    expect(parseMoneyInput(19)?.toFixed(2)).toBe("19.00");
+    expect(parseMoneyInput("0")?.toFixed(2)).toBe("0.00");
+  });
+
+  it("rejects values that would otherwise be silently rounded or misparsed", () => {
+    expect(parseMoneyInput("0.004")).toBeNull();
+    expect(parseMoneyInput("1.239")).toBeNull();
+    expect(parseMoneyInput("1e3")).toBeNull();
+    expect(parseMoneyInput("-1.00")).toBeNull();
+    expect(parseMoneyInput("9999999999999")).toBeNull();
+    expect(parseMoneyInput("")).toBeNull();
+    expect(parseMoneyInput(null)).toBeNull();
   });
 });

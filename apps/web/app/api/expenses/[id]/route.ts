@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
-import { D } from "@/lib/money";
+import { parseMoneyInput } from "@/lib/money";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };
@@ -20,12 +20,11 @@ export async function PATCH(request: NextRequest, context: Context) {
   const { id } = await context.params;
   const body = await request.json().catch(() => null);
   const description = typeof body?.description === "string" ? body.description.trim().slice(0, 240) : "";
-  const amountText = String(body?.amount ?? "").trim();
-  const taxText = String(body?.taxAmount ?? "0").trim();
-  const amount = Number(amountText), taxAmount = Number(taxText);
+  const amount = parseMoneyInput(body?.amount);
+  const taxAmount = parseMoneyInput(body?.taxAmount ?? "0");
   const date = typeof body?.date === "string" ? new Date(body.date) : new Date(NaN);
   const currency = typeof body?.currency === "string" ? body.currency.trim().toUpperCase() : "";
-  if (description.length < 2 || !amountText || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(taxAmount) || taxAmount < 0 || taxAmount > amount || Number.isNaN(date.getTime()) || !/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Confirma a descrição, os valores, a data e a moeda." }, { status: 400 });
+  if (description.length < 2 || !amount || amount.lte(0) || !taxAmount || taxAmount.isNegative() || taxAmount.gt(amount) || Number.isNaN(date.getTime()) || !/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Confirma a descrição, valores positivos com no máximo duas casas decimais, a data e a moeda." }, { status: 400 });
   if (body?.paymentMethod && !methods.includes(body.paymentMethod)) return NextResponse.json({ error: "Método de pagamento inválido." }, { status: 400 });
   if (body?.status && !statuses.includes(body.status)) return NextResponse.json({ error: "Estado inválido." }, { status: 400 });
   const organizationId = current.membership.organizationId;
@@ -37,7 +36,7 @@ export async function PATCH(request: NextRequest, context: Context) {
   const expense = await prisma.$transaction(async (tx) => {
     const category = categoryName ? await tx.category.upsert({ where: { organizationId_kind_name: { organizationId, kind: "EXPENSE", name: categoryName } }, update: {}, create: { organizationId, kind: "EXPENSE", name: categoryName } }) : null;
     return tx.expense.update({ where: { id }, data: {
-      description, amount: D(amountText).toFixed(2), taxAmount: D(taxText).toFixed(2), date, currency,
+      description, amount: amount.toFixed(2), taxAmount: taxAmount.toFixed(2), date, currency,
       status: body?.status === "PENDING" ? "PENDING" : "PAID",
       paymentMethod: methods.includes(body?.paymentMethod) ? body.paymentMethod : null,
       supplierId, categoryId: category?.id ?? null,
