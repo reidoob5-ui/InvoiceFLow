@@ -28,3 +28,28 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Micro-interacções do workspace e da página inicial */
+.hero-image-reveal { animation: hero-reveal .8s cubic-bezier(.2,.8,.2,1) both; }
+.hero-image-reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,.09) 48%, transparent 70%);
+  transform: translateX(-120%);
+  animation: hero-shimmer 9s ease-in-out 1.2s infinite;
+}
+.service-icon-orbit { animation: icon-breathe 4.5s ease-in-out infinite; }
+@keyframes hero-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes hero-shimmer {
+  0%, 72%, 100% { transform: translateX(-120%); }
+  88% { transform: translateX(120%); }
+}
+@keyframes icon-breathe {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(129,140,248,0)); }
+  50% { filter: drop-shadow(0 0 9px rgba(129,140,248,.28)); }
+}

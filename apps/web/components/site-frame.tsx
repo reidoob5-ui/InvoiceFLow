@@ -9,12 +9,12 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { href: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
-  { href: "/invoices", label: "Facturas", icon: FileText },
-  { href: "/clients", label: "Clientes", icon: Users },
-  { href: "/products", label: "Produtos e serviços", icon: Package },
-  { href: "/suppliers", label: "Fornecedores", icon: Truck },
-  { href: "/taxes", label: "Impostos e taxas", icon: ReceiptText },
+  { href: "/dashboard", label: "Visão geral", icon: LayoutDashboard, description: "O panorama do teu negócio e da actividade financeira.", accent: "from-indigo-400 to-violet-400" },
+  { href: "/invoices", label: "Facturas", icon: FileText, description: "Cria documentos, acompanha estados e controla recebimentos.", accent: "from-cyan-400 to-blue-500" },
+  { href: "/clients", label: "Clientes", icon: Users, description: "Organiza contactos, histórico e relações comerciais.", accent: "from-violet-400 to-fuchsia-500" },
+  { href: "/products", label: "Produtos e serviços", icon: Package, description: "Gere o catálogo, preços e serviços da tua empresa.", accent: "from-amber-300 to-orange-500" },
+  { href: "/suppliers", label: "Fornecedores", icon: Truck, description: "Mantém fornecedores e parceiros sempre organizados.", accent: "from-emerald-300 to-teal-500" },
+  { href: "/taxes", label: "Impostos e taxas", icon: ReceiptText, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
 ];
 
 const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding"];
@@ -77,7 +77,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
             const active = pathname === href || pathname.startsWith(href + "/");
             return <Link key={href} href={href} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}
               className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20 shadow-lg shadow-indigo-950/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}`}>
-              <Icon size={19} strokeWidth={1.8} className={active ? "text-indigo-300" : "text-slate-500 group-hover:text-slate-200"}/>
+              <Icon size={19} strokeWidth={1.8} className={`transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-110 ${active ? "text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,.65)]" : "text-slate-500 group-hover:text-slate-200"}`}/>
               {!collapsed && <span>{label}</span>}
               {active && !collapsed && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-[0_0_10px_#a5b4fc]"/>}
             </Link>;
@@ -111,11 +111,14 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
 
       <div className={`relative z-10 min-h-screen transition-[padding] duration-300 ${offset}`}>
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-white/[.07] bg-[#080d18]/80 px-4 backdrop-blur-2xl sm:px-7">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobileOpen(true)} aria-label="Abrir menu" aria-expanded={mobileOpen} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-200 transition hover:border-indigo-400/40 hover:bg-indigo-500/10">
+          <div className="flex min-w-0 items-center gap-3">
+            <button onClick={() => setMobileOpen(true)} aria-label="Abrir menu" aria-expanded={mobileOpen} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-200 transition hover:border-indigo-400/40 hover:bg-indigo-500/10">
               <Menu size={20}/>
             </button>
-            <div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">InvoiceFlow</p><p className="text-sm font-semibold text-slate-200">{pageTitle}</p></div>
+            <span className={`service-icon-orbit grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${activePage?.accent || "from-indigo-400 to-violet-500"} p-[1px] shadow-lg shadow-indigo-950/30`}>
+              <span className="grid h-full w-full place-items-center rounded-[15px] bg-[#111a2b] text-white"><>{activePage ? <activePage.icon size={18} strokeWidth={1.9}/> : <Sparkles size={18}/>}</></span>
+            </span>
+            <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-slate-500">InvoiceFlow · Espaço de trabalho</p><p className="truncate text-sm font-semibold text-slate-100">{pageTitle}</p><p className="hidden max-w-[520px] truncate text-[10px] text-slate-500 sm:block">{activePage?.description || "As ferramentas do teu negócio, sempre à mão."}</p></div>
           </div>
           <div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"/><span className="text-[10px] font-medium text-emerald-200">Workspace activo</span></div>
         </header>
