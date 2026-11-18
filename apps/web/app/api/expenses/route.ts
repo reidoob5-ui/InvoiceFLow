@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
     prisma.expense.findMany({ where, orderBy: [{ date: "desc" }, { createdAt: "desc" }], take: 300, include: { supplier: { select: { id: true, name: true } }, category: { select: { id: true, name: true } } } }),
     prisma.category.findMany({ where: { organizationId, kind: "EXPENSE" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.supplier.findMany({ where: { organizationId, archivedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.expense.groupBy({ by: ["status"], where: { organizationId }, _sum: { amount: true }, _count: { _all: true } }),
+    prisma.expense.groupBy({ by: ["currency", "status"], where: { organizationId }, _sum: { amount: true }, _count: { _all: true } }),
   ]);
-  return NextResponse.json({ defaultCurrency: current.membership.organization.currency || "AOA", expenses, categories, suppliers, totals: Object.fromEntries(totals.map((item) => [item.status, { amount: item._sum.amount?.toString() ?? "0", count: item._count._all }])) });
+  return NextResponse.json({ defaultCurrency: current.membership.organization.currency || "AOA", expenses, categories, suppliers, totalsByCurrency: Object.fromEntries([...new Set(totals.map((item) => item.currency))].map((currency) => [currency, Object.fromEntries(totals.filter((item) => item.currency === currency).map((item) => [item.status, { amount: item._sum.amount?.toString() ?? "0", count: item._count._all }]))])) });
 }
 
 export async function POST(request: NextRequest) {
