@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
-import { retryOnConflict } from "@/lib/tx-retry";
-import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -17,9 +16,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   }
   const { id } = await context.params;
   const organizationId = current.membership.organizationId;
-  const planLimit = await checkOrganizationPlanLimit(organizationId, "maxInvoicesPerMonth");
-  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
-  const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+  const execution = await withOrganizationPlanLimit(organizationId, "maxInvoicesPerMonth", 1, async (tx) => {
     const quote = await tx.quote.findFirst({ where: { id, organizationId }, include: { lines: { orderBy: { position: "asc" } } } });
     if (!quote) return { error: "NOT_FOUND" as const };
     if (quote.status !== "ACCEPTED") return { error: "NOT_ACCEPTED" as const };
@@ -45,7 +42,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       events: { create: { userId: current.user.id, action: "converted", note: invoice.id } },
     } });
     return { invoice };
-  }, { isolationLevel: "Serializable" }));
+  });
+  if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+  const result = execution.value;
   if ("error" in result && result.error) {
     const messages: Record<string, string> = {
       NOT_FOUND: "Orçamento não encontrado.", NOT_ACCEPTED: "Só é possível converter orçamentos aceites.",
