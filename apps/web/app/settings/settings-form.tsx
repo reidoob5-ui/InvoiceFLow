@@ -60,7 +60,7 @@ export default function CompanySettingsForm() {
   if (loading) return <main className="mx-auto max-w-5xl px-5 py-12"><div className="animate-pulse rounded-2xl border border-white/10 bg-slate-900/60 p-10 text-sm text-slate-400">A carregar definições da empresa…</div></main>;
 
   const field = (key: keyof FormState, label: string, placeholder = "", type = "text") => (
-    <label className={labelClass}>{label}<input type={type} value={form[key]} onChange={e => update(key, e.target.value)} placeholder={placeholder} className={inputClass}/></label>
+    <label className={labelClass}>{label}<input type={type} required={["name","invoicePrefix","quotePrefix"].includes(key)} min={key === "defaultPaymentTerms" ? 0 : undefined} max={key === "defaultPaymentTerms" ? 365 : undefined} step={key === "defaultPaymentTerms" ? 1 : undefined} value={form[key]} onChange={e => update(key, e.target.value)} placeholder={placeholder} className={inputClass}/></label>
   );
 
   return <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
@@ -87,8 +87,8 @@ export default function CompanySettingsForm() {
           {field("addressLine2","Complemento","Edifício, andar ou sala")}
           {field("city","Cidade / município","Luanda")}
           {field("postalCode","Código postal","Opcional")}
-          {field("country","País (código ISO)","AO")}
-          {field("currency","Moeda (código ISO)","AOA")}
+          {<label className={labelClass}>País (código ISO)<input maxLength={2} value={form.country} onChange={e => update("country",e.target.value.toUpperCase())} placeholder="AO" className={inputClass}/></label>}
+          {<label className={labelClass}>Moeda (código ISO)<input maxLength={3} value={form.currency} onChange={e => update("currency",e.target.value.toUpperCase())} placeholder="AOA" className={inputClass}/></label>}
           {field("timezone","Fuso horário IANA","Africa/Luanda")}
           <label className={labelClass}>Idioma padrão da empresa<select value={form.locale} onChange={e => update("locale",e.target.value)} className={inputClass}><option value="pt">Português</option><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option></select></label>
         </div>
