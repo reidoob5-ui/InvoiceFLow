@@ -60,11 +60,14 @@ export async function POST(request: Request) {
         if (!organizationId || !planKey) throw new Error("Paddle transaction has no matching InvoiceFlow organization/plan.");
         const expectedPrice = paddlePriceId(planKey, interval);
         const items = Array.isArray(data.items) ? data.items as Array<Record<string, unknown>> : [];
-        const containsExpectedPrice = items.some((item) => {
+        // Checkout creates exactly one seat of exactly one configured plan.
+        // Do not grant a subscription for mixed carts or unexpected quantities.
+        const matchesExpectedCart = Boolean(expectedPrice) && items.length === 1 && items.every((item) => {
           const price = item.price && typeof item.price === "object" ? item.price as Record<string, unknown> : {};
-          return price.id === expectedPrice || item.price_id === expectedPrice;
+          const itemPriceId = price.id ?? item.price_id;
+          return itemPriceId === expectedPrice && item.quantity === 1;
         });
-        if (!expectedPrice || !containsExpectedPrice) throw new Error("Paddle transaction price does not match the configured plan.");
+        if (!matchesExpectedCart) throw new Error("Paddle transaction contents do not match the configured plan and quantity.");
         const plan = await tx.plan.findFirst({ where: { key: planKey, isPublic: true } });
         if (!plan) throw new Error("Paddle plan no longer exists.");
         const billingPeriod = data.billing_period && typeof data.billing_period === "object"
