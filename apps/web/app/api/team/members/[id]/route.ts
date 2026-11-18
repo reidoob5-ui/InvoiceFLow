@@ -23,6 +23,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (!target) return NextResponse.json({ error: "Membro não encontrado." }, { status: 404 });
   if (target.userId === current.user.id)
     return NextResponse.json({ error: "Não podes alterar o teu próprio acesso nesta página." }, { status: 409 });
+  if (target.role === "OWNER" && current.membership.role !== "OWNER")
+    return NextResponse.json({ error: "Apenas um proprietário pode gerir o acesso de outro proprietário." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
   const data: { role?: Role; status?: "ACTIVE" | "SUSPENDED" } = {};
