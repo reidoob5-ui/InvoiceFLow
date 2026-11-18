@@ -4,21 +4,24 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Quote = { id: string; number: string | null; title: string | null; status: string; currency: string; total: string; issueDate: string | null; validUntil: string | null; createdAt: string; client: { name: string } };
-type Client = { id: string; name: string };\ntype Tax = { id: string; name: string; rate: string };
+type Client = { id: string; name: string };
+type Tax = { id: string; name: string; rate: string };
 const labels: Record<string,string> = { DRAFT:"Rascunho", SENT:"Enviado", ACCEPTED:"Aceite", REJECTED:"Rejeitado", EXPIRED:"Expirado", CONVERTED:"Convertido" };
 
 export default function QuotesPage() {
   const [quotes,setQuotes] = useState<Quote[]>([]);
-  const [clients,setClients] = useState<Client[]>([]);\n  const [taxes,setTaxes] = useState<Tax[]>([]);
+  const [clients,setClients] = useState<Client[]>([]);
+  const [taxes,setTaxes] = useState<Tax[]>([]);
   const [show,setShow] = useState(false);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState("");
   const [form,setForm] = useState({ clientId:"", title:"", currency:"AOA", validUntil:"", notes:"", description:"", quantity:"1", unitPrice:"", taxRateId:"", discountPercent:"0" });
   const load = useCallback(async () => {
-    const [qr,cr] = await Promise.all([fetch("/api/quotes"),fetch("/api/clients")]);
-    const qd = await qr.json(), cd = await cr.json();
+    const [qr,cr,tr] = await Promise.all([fetch("/api/quotes"),fetch("/api/clients"),fetch("/api/taxes")]);
+    const qd = await qr.json(), cd = await cr.json(), td = await tr.json();
     if (qr.ok) setQuotes(qd.quotes ?? []); else setError(qd.error ?? "Falha ao carregar orçamentos.");
-    if (cr.ok) setClients(cd.clients ?? []);\n    if (tr.ok) setTaxes((td.taxes ?? []).filter((tax: Tax) => tax.id));
+    if (cr.ok) setClients(cd.clients ?? []);
+    if (tr.ok) setTaxes((td.taxes ?? []).filter((tax: Tax) => tax.id));
   },[]);
   useEffect(()=>{ void load(); },[load]);
 
@@ -60,7 +63,7 @@ export default function QuotesPage() {
       <label className="text-sm text-slate-300">Título<input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>
       <label className="text-sm text-slate-300">Moeda<input required maxLength={3} value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value.toUpperCase()}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>
       <label className="text-sm text-slate-300">Válido até<input type="date" value={form.validUntil} onChange={e=>setForm(f=>({...f,validUntil:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>
-      <div className="sm:col-span-2 rounded-xl border border-white/10 p-4"><h3 className="mb-3 font-medium">Primeira linha</h3><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300 sm:col-span-2">Descrição *<input required value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>{([["quantity","Quantidade"],["unitPrice","Preço unitário"],["discountPercent","Desconto %"],["taxRate","Imposto %"]] as const).map(([key,label])=><label key={key} className="text-sm text-slate-300">{label}<input required type="number" min="0" step="0.01" value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>)}</div></div>
+      <div className="sm:col-span-2 rounded-xl border border-white/10 p-4"><h3 className="mb-3 font-medium">Primeira linha</h3><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm text-slate-300 sm:col-span-2">Descrição *<input required value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>{([["quantity","Quantidade"],["unitPrice","Preço unitário"],["discountPercent","Desconto %"]] as const).map(([key,label])=><label key={key} className="text-sm text-slate-300">{label}<input required type="number" min="0" step="0.01" value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label>)}</div><label className="mt-3 block text-sm text-slate-300">Taxa de imposto<select value={form.taxRateId} onChange={e=>setForm(f=>({...f,taxRateId:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"><option value="">Sem imposto</option>{taxes.map(t=><option key={t.id} value={t.id}>{t.name} ({Number(t.rate)}%)</option>)}</select></label></div>
       <label className="text-sm text-slate-300 sm:col-span-2">Notas<textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3"/></label></div><button disabled={busy} className="mt-5 w-full rounded-xl bg-indigo-500 px-4 py-3 font-semibold disabled:opacity-50">{busy?"A guardar…":"Guardar orçamento"}</button></form></div>}
   </div></main>;
 }
