@@ -53,6 +53,10 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  const stringKeys = ["name", "legalName", "taxId", "email", "phone", "website", "addressLine1", "addressLine2", "city", "postalCode", "country", "currency", "timezone", "locale", "invoicePrefix", "quotePrefix", "invoiceNotes", "invoiceTerms"];
+  if (stringKeys.some((key) => body[key] !== undefined && body[key] !== null && typeof body[key] !== "string")) {
+    return NextResponse.json({ error: "Um ou mais campos de texto têm um formato inválido." }, { status: 400 });
+  }
 
   const name = text(body.name, 120);
   const legalName = text(body.legalName, 160);
