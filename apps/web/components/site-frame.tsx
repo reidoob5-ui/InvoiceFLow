@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +24,7 @@ const navigation = [
   { href: "/insights", label: "Inteligência financeira", icon: Lightbulb, description: "Identifica riscos, vencimentos e acções prioritárias a partir dos teus registos.", accent: "from-amber-200 to-orange-400" },
   { href: "/team", label: "Equipa e acessos", icon: Users, description: "Gere membros, perfis de acesso e convites para a tua empresa.", accent: "from-cyan-300 to-blue-500" },
   { href: "/billing", label: "Plano e subscrição", icon: CreditCard, description: "Consulta o teu plano, limites e estado da subscrição.", accent: "from-indigo-300 to-violet-500" },
+  { href: "/settings", label: "Definições da empresa", icon: Settings, description: "Actualiza os dados legais, fiscais, regionais e os documentos da tua organização.", accent: "from-sky-300 to-indigo-500" },
 ];
 
 const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept"];
