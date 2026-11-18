@@ -11,6 +11,7 @@ import { checkLimit, hasActiveAccess, applyCoupon, DEFAULT_PLANS } from "@/lib/p
 import { csvCell, toCsv, parseCsv } from "@/lib/csv";
 import { t, dictionaryKeys, LOCALES } from "@/lib/i18n";
 import { parseMoneyInput } from "@/lib/money";
+import { calculateBusinessPlan } from "@/lib/business-planner";
 
 describe("invoice totals", () => {
   it("avoids floating point errors (0.1 + 0.2 style)", () => {
@@ -309,5 +310,31 @@ describe("strict monetary input parsing", () => {
     expect(parseMoneyInput("9999999999999")).toBeNull();
     expect(parseMoneyInput("")).toBeNull();
     expect(parseMoneyInput(null)).toBeNull();
+  });
+});
+
+describe("business profitability planner", () => {
+  const sample = { capital: "500000", fixed: "120000", variable: "2500", price: "7500", units: "30", ownerPay: "100000" };
+
+  it("calculates break-even, minimum price, monthly result and runway", () => {
+    const result = calculateBusinessPlan(sample);
+    expect(result.contribution.toFixed(2)).toBe("5000.00");
+    expect(result.breakEven?.toFixed(0)).toBe("44");
+    expect(result.minimumPrice?.toDecimalPlaces(2).toFixed(2)).toBe("9833.33");
+    expect(result.monthlyProfit.toFixed(2)).toBe("-70000.00");
+    expect(result.runway?.toDecimalPlaces(2).toFixed(2)).toBe("2.27");
+  });
+
+  it("does not claim break-even when each sale loses money", () => {
+    const result = calculateBusinessPlan({ ...sample, price: "2000", variable: "2500" });
+    expect(result.canBreakEven).toBe(false);
+    expect(result.breakEven).toBeNull();
+    expect(result.monthlyProfit.isNegative()).toBe(true);
+  });
+
+  it("handles a profitable scenario without combining or converting currencies", () => {
+    const result = calculateBusinessPlan({ ...sample, price: "12000", units: "50" });
+    expect(result.monthlyProfit.toFixed(2)).toBe("275000.00");
+    expect(result.margin.toDecimalPlaces(2).toFixed(2)).toBe("79.17");
   });
 });
