@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, Users, Package, Truck,
-  ReceiptText, Settings2, LogOut, ChevronLeft, Sparkles, CreditCard
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard
 } from "lucide-react";
 
 const navigation = [
@@ -44,7 +44,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#080d18] text-slate-100">
       {mobileOpen && <button aria-label="Fechar menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" />}
-      <aside className={\`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-white/[.08] bg-[#0b1220]/95 px-4 py-5 shadow-2xl shadow-black/40 backdrop-blur-2xl transition-all duration-300 \${width} \${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}\`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-white/[.08] bg-[#0b1220]/95 px-4 py-5 shadow-2xl shadow-black/40 backdrop-blur-2xl transition-all duration-300 ${width} ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="mb-10 flex items-center justify-between px-2">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 via-violet-500 to-cyan-400 text-xl font-black text-white shadow-lg shadow-indigo-500/25">I</span>
@@ -58,7 +58,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
           {navigation.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
             return <Link key={href} href={href} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined}
-              className={\`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 \${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20 shadow-lg shadow-indigo-950/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}\`}>
+              className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20 shadow-lg shadow-indigo-950/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}`}>
               <Icon size={19} strokeWidth={1.8} className={active ? "text-indigo-300" : "text-slate-500 group-hover:text-slate-200"}/>
               {!collapsed && <span>{label}</span>}
               {active && !collapsed && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-[0_0_10px_#a5b4fc]"/>}
@@ -87,7 +87,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className={\`min-h-screen transition-[padding] duration-300 \${offset}\`}>
+      <div className={`min-h-screen transition-[padding] duration-300 ${offset}`}>
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-white/[.07] bg-[#080d18]/80 px-4 backdrop-blur-2xl sm:px-7">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} aria-label="Abrir menu" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-200 transition hover:border-indigo-400/40 hover:bg-indigo-500/10">
