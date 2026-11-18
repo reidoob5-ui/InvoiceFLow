@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentSession, audit } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { parseCsv } from "@/lib/csv";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 const clean = (v: string | undefined, max: number) => (v ?? "").trim().slice(0,max);
@@ -32,7 +33,10 @@ export async function POST(request: NextRequest) {
     valid.push({ organizationId:current.membership.organizationId,name,type:data.type?.toUpperCase()==="INDIVIDUAL"?"INDIVIDUAL":"COMPANY",email:email||null,company:clean(data.company,160)||null,phone:clean(data.phone,40)||null,taxId:clean(data.taxid,80)||null,country:clean(data.country,2).toUpperCase()||null,city:clean(data.city,100)||null,currency:clean(data.currency,3).toUpperCase()||null });
   }
   if (matrix.length - 1 > 500) skipped += matrix.length - 1 - 500;
-  if (valid.length) await prisma.client.createMany({ data:valid });
+  if (valid.length) {
+    const execution = await withOrganizationPlanLimit(current.membership.organizationId, "maxClients", valid.length, (tx) => tx.client.createMany({ data:valid }));
+    if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+  }
   if (valid.length) await audit({ action:"client.csv_imported",userId:current.user.id,organizationId:current.membership.organizationId,entityType:"Client",entityId:null });
   return NextResponse.json({ imported:valid.length,skipped });
 }

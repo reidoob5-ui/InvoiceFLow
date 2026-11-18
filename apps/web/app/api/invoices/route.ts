@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { calculatePreparedLines, InvoiceInputError, prepareInvoiceLines } from "@/lib/invoices";
+import { withOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
   try {
     const lines = await prepareInvoiceLines(body.lines, organizationId, currency);
     const calculated = calculatePreparedLines(lines, withholdingRate);
-    const invoice = await prisma.invoice.create({
+    const execution = await withOrganizationPlanLimit(organizationId, "maxInvoicesPerMonth", 1, (tx) => tx.invoice.create({
       data: {
         organizationId, clientId, createdById: current.user.id, status: "DRAFT", currency,
         paymentTermsDays: termsDays, withholdingRate,
@@ -61,7 +62,9 @@ export async function POST(request: NextRequest) {
         events: { create: { userId: current.user.id, action: "created" } },
       },
       select: { id: true, number: true, status: true, currency: true, subtotal: true, discountTotal: true, taxTotal: true, withholdingTotal: true, total: true, createdAt: true },
-    });
+    }));
+    if (!execution.allowed) return NextResponse.json(planLimitResponse(execution.result), { status: 402 });
+    const invoice = execution.value;
     await audit({ action: "invoice.created", userId: current.user.id, organizationId, entityType: "Invoice", entityId: invoice.id });
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error) {
