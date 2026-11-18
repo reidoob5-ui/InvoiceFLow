@@ -93,6 +93,7 @@ export default function BillingOverview() {
         </label>
       </div>
       {selected && <p className="mt-3 text-sm font-semibold text-white">{new Intl.NumberFormat("pt-AO",{style:"currency",currency:"AOA",maximumFractionDigits:0}).format(interval==="YEARLY"?selected.yearlyPrice:selected.monthlyPrice)} <span className="text-xs font-normal text-slate-500">/ {interval==="YEARLY"?"ano":"mês"}</span></p>}
+      <p className="mt-2 text-[11px] text-slate-500">O valor em Kz é a referência local. No checkout internacional, a Paddle apresenta o preço e a moeda finais antes da confirmação.</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <button type="button" disabled={!data.billingProviders.multicaixa||!!checkoutLoading} onClick={()=>beginCheckout("multicaixa")} className="flex items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"><Smartphone size={17}/>{checkoutLoading==="multicaixa"?"A preparar…":"Pagar com MULTICAIXA"}</button>
         <button type="button" disabled={!data.billingProviders.international||!!checkoutLoading} onClick={()=>beginCheckout("international")} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"><Globe size={17}/>{checkoutLoading==="international"?"A preparar…":"Pagar internacionalmente"}</button>
