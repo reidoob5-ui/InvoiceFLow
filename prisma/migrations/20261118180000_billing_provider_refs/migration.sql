@@ -24,3 +24,4 @@ CREATE UNIQUE INDEX "ProviderWebhookEvent_provider_eventId_key"
   ON "ProviderWebhookEvent"("provider", "eventId");
 CREATE INDEX "ProviderWebhookEvent_createdAt_idx"
   ON "ProviderWebhookEvent"("createdAt");
+ALTER TABLE "PlatformInvoice" ADD COLUMN "billingInterval" "BillingInterval" NOT NULL DEFAULT 'MONTHLY';
