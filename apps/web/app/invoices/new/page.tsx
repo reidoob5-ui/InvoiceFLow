@@ -20,8 +20,13 @@ export default function NewInvoicePage() {
     const [cd,pd,td,od]=await Promise.all([c.json(),p.json(),t.json(),o.json()]);
     if(!c.ok)throw new Error(cd.error||"Não foi possível carregar clientes.");
     if(!p.ok)throw new Error(pd.error||"Não foi possível carregar produtos.");
-    if(!t.ok)throw new Error(td.error||"Não foi possível carregar impostos.");\n    if(!o.ok)throw new Error(od.error||"Não foi possível carregar as definições da empresa.");
-    setClients(cd.clients);setProducts(pd.products);setTaxes(td.taxes.filter((x:Tax & {active?:boolean})=>x.active));\n    setCurrency(od.defaults.currency || "USD");\n    setPaymentTermsDays(String(od.defaults.defaultPaymentTerms ?? 30));\n    setNotes(od.defaults.invoiceNotes || "");\n    setTerms(od.defaults.invoiceTerms || "");
+    if(!t.ok)throw new Error(td.error||"Não foi possível carregar impostos.");
+    if(!o.ok)throw new Error(od.error||"Não foi possível carregar as definições da empresa.");
+    setClients(cd.clients);setProducts(pd.products);setTaxes(td.taxes.filter((x:Tax & {active?:boolean})=>x.active));
+    setCurrency(od.defaults.currency || "USD");
+    setPaymentTermsDays(String(od.defaults.defaultPaymentTerms ?? 30));
+    setNotes(od.defaults.invoiceNotes || "");
+    setTerms(od.defaults.invoiceTerms || "");
     const first=cd.clients[0];if(first){setClientId(first.id);if(first.currency)setCurrency(first.currency);}
     const defaultTax=td.taxes.find((x:Tax & {isDefault?:boolean;active?:boolean})=>x.isDefault&&x.active);
     if(defaultTax)setLines([ {...blankLine(),taxRateId:defaultTax.id} ]);
