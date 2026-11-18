@@ -23,7 +23,7 @@ const navigation = [
   { href: "/billing", label: "Plano e subscrição", icon: CreditCard, description: "Consulta o teu plano, limites e estado da subscrição.", accent: "from-indigo-300 to-violet-500" },
 ];
 
-const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding"];
+const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept"];
 
 export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
