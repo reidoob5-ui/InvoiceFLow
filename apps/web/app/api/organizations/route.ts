@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { randomUUID } from "node:crypto";
+import { DEFAULT_PLANS } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -19,12 +20,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const current = await getCurrentSession();
   if (!current) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
   try {
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
+    const planKey = typeof body.planKey === "string" ? body.planKey : "";
+    const planSeed = DEFAULT_PLANS.find((plan) => plan.key === planKey);
     if (name.length < 2) return NextResponse.json({ error: "O nome da empresa deve ter pelo menos 2 caracteres." }, { status: 400 });
+    if (!planSeed) return NextResponse.json({ error: "Escolhe um dos planos disponíveis antes de continuar." }, { status: 400 });
+
     const count = await prisma.membership.count({ where: { userId: current.user.id, status: "ACTIVE" } });
     if (count >= 10) return NextResponse.json({ error: "Limite inicial de 10 empresas atingido." }, { status: 403 });
+
     const base = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 45) || "empresa";
     const organization = await prisma.$transaction(async (tx) => {
       let slug = base;
@@ -33,12 +40,69 @@ export async function POST(request: NextRequest) {
         if (!exists) break;
         slug = `${base}-${randomUUID().slice(0, 6)}`;
       }
-      const org = await tx.organization.create({ data: { name, slug, memberships: { create: { userId: current.user.id, role: "OWNER" } } } });
+
+      const org = await tx.organization.create({
+        data: {
+          name,
+          slug,
+          country: "AO",
+          currency: "AOA",
+          locale: "pt",
+          timezone: "Africa/Luanda",
+          memberships: { create: { userId: current.user.id, role: "OWNER" } },
+        },
+      });
+
+      const plan = await tx.plan.upsert({
+        where: { key: planSeed.key },
+        update: {
+          name: planSeed.name, description: planSeed.description,
+          monthlyPrice: planSeed.monthlyPrice, yearlyPrice: planSeed.yearlyPrice,
+          currency: planSeed.currency, trialDays: planSeed.trialDays,
+          limits: planSeed.limits, features: planSeed.features,
+          sortOrder: planSeed.sortOrder, isPublic: true,
+        },
+        create: {
+          key: planSeed.key, name: planSeed.name, description: planSeed.description,
+          monthlyPrice: planSeed.monthlyPrice, yearlyPrice: planSeed.yearlyPrice,
+          currency: planSeed.currency, trialDays: planSeed.trialDays,
+          limits: planSeed.limits, features: planSeed.features,
+          sortOrder: planSeed.sortOrder, isPublic: true,
+        },
+      });
+
+      const trialEndsAt = planSeed.trialDays > 0
+        ? new Date(Date.now() + planSeed.trialDays * 24 * 60 * 60 * 1000)
+        : null;
+
+      await tx.subscription.create({
+        data: {
+          organizationId: org.id,
+          planId: plan.id,
+          status: trialEndsAt ? "TRIALING" : "ACTIVE",
+          interval: "MONTHLY",
+          trialEndsAt,
+          currentPeriodEnd: trialEndsAt,
+        },
+      });
+
       await tx.session.update({ where: { id: current.session.id }, data: { activeOrganizationId: org.id } });
-      await tx.auditLog.create({ data: { action: "organization.created", userId: current.user.id, organizationId: org.id, entityType: "Organization", entityId: org.id } });
+      await tx.auditLog.create({
+        data: {
+          action: "organization.created",
+          userId: current.user.id,
+          organizationId: org.id,
+          entityType: "Organization",
+          entityId: org.id,
+        },
+      });
       return org;
     });
-    return NextResponse.json({ organization: { id: organization.id, name: organization.name, slug: organization.slug } }, { status: 201 });
+
+    return NextResponse.json({
+      organization: { id: organization.id, name: organization.name, slug: organization.slug },
+      planKey: planSeed.key,
+    }, { status: 201 });
   } catch (error) {
     console.error("[organizations]", error instanceof Error ? `${error.name}: ${error.message}` : error);
     return NextResponse.json({ error: "Não foi possível criar a empresa." }, { status: 500 });
