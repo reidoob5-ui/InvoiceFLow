@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       await tx.providerWebhookEvent.create({
         data: { provider: "proxypay", eventId: verified.id },
       });
+
       if (verified.status === "rejected") {
         await tx.platformInvoice.updateMany({
           where: { id: invoice.id, status: "OPEN" },
@@ -49,7 +50,17 @@ export async function POST(request: Request) {
         });
         return;
       }
+
       if (!invoice.targetPlanId || !invoice.periodEnd) throw new Error("Invoice missing plan/period metadata.");
+
+      // Claim the invoice before changing access. The conditional update prevents
+      // a late/duplicate callback from activating a voided or already-paid invoice.
+      const claimed = await tx.platformInvoice.updateMany({
+        where: { id: invoice.id, status: "OPEN" },
+        data: { status: "PAID", paidAt: new Date() },
+      });
+      if (claimed.count !== 1) return;
+
       const subscription = await tx.subscription.upsert({
         where: { organizationId: invoice.organizationId },
         update: {
@@ -74,9 +85,9 @@ export async function POST(request: Request) {
           providerRef: verified.id,
         },
       });
-      await tx.platformInvoice.updateMany({
-        where: { id: invoice.id, status: "OPEN" },
-        data: { status: "PAID", paidAt: new Date(), subscriptionId: subscription.id },
+      await tx.platformInvoice.update({
+        where: { id: invoice.id },
+        data: { subscriptionId: subscription.id },
       });
     });
   } catch (error) {
