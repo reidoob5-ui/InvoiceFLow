@@ -70,14 +70,14 @@ export async function GET(request: NextRequest) {
   ]);
 
   const cashIn = new Map<string, ReturnType<typeof D>>();
-  const expenseOut = new Map<string, number>();
-  const supplierOut = new Map<string, number>();
-  const invoiced = new Map<string, number>();
-  const receivable = new Map<string, number>();
-  const overdueReceivable = new Map<string, number>();
-  const payable = new Map<string, number>();
-  const overduePayable = new Map<string, number>();
-  const categoryTotals = new Map<string, number>();
+  const expenseOut = new Map<string, ReturnType<typeof D>>();
+  const supplierOut = new Map<string, ReturnType<typeof D>>();
+  const invoiced = new Map<string, ReturnType<typeof D>>();
+  const receivable = new Map<string, ReturnType<typeof D>>();
+  const overdueReceivable = new Map<string, ReturnType<typeof D>>();
+  const payable = new Map<string, ReturnType<typeof D>>();
+  const overduePayable = new Map<string, ReturnType<typeof D>>();
+  const categoryTotals = new Map<string, ReturnType<typeof D>>();
   const monthly = new Map<string, { inflows: ReturnType<typeof D>; outflows: ReturnType<typeof D> }>();
 
   function monthBucket(date: Date, currency: string) {
@@ -108,7 +108,8 @@ export async function GET(request: NextRequest) {
   const overdueInvoices: Array<{ id: string; number: string | null; client: string; currency: string; balance: string; dueDate: string }> = [];
   for (const invoice of invoices) {
     add(invoiced, invoice.currency, invoice.total);
-    const balance = D(invoice.total).minus(invoice.amountPaid).max(0);
+    const rawBalance = D(invoice.total).minus(invoice.amountPaid);
+    const balance = rawBalance.gt(0) ? rawBalance : D(0);
     if (balance.gt(0)) {
       add(receivable, invoice.currency, balance);
       if (invoice.dueDate && invoice.dueDate < now) {
@@ -121,7 +122,8 @@ export async function GET(request: NextRequest) {
 
   const overdueBills: Array<{ id: string; number: string | null; supplier: string; currency: string; balance: string; dueDate: string }> = [];
   for (const bill of bills) {
-    const balance = D(bill.total).minus(bill.amountPaid).max(0);
+    const rawBalance = D(bill.total).minus(bill.amountPaid);
+    const balance = rawBalance.gt(0) ? rawBalance : D(0);
     if (balance.gt(0)) {
       add(payable, bill.currency, balance);
       if (bill.dueDate && bill.dueDate < now) {
