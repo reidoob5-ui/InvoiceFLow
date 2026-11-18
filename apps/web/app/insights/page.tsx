@@ -21,10 +21,6 @@ function dateLabel(value: Date, locale: string, timeZone: string) {
     dateStyle: "medium", timeZone,
   }).format(value);
 }
-function daysUntil(value: Date, today: Date) {
-  return Math.ceil((value.getTime() - today.getTime()) / DAY);
-}
-
 export default async function FinancialIntelligencePage() {
   const current = await getCurrentSession();
   if (!current) redirect("/login");
