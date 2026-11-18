@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
-import { D, parseMoneyInput } from "@/lib/money";
+import { parseMoneyInput } from "@/lib/money";
 
 export const runtime = "nodejs";
 const methods = ["CASH", "BANK_TRANSFER", "CARD", "MOBILE_MONEY", "CHECK", "PROVIDER", "OTHER"] as const;
