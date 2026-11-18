@@ -50,5 +50,8 @@
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
