@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, canAssignRole, ForbiddenError, type Role, ROLES } from "@/lib/permissions";
+import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   }
   if (body?.status === "ACTIVE" || body?.status === "SUSPENDED") data.status = body.status;
   if (!data.role && !data.status) return NextResponse.json({ error: "Nenhuma alteração válida foi indicada." }, { status: 400 });
+
+  if (target.status === "SUSPENDED" && data.status === "ACTIVE") {
+    const planLimit = await checkOrganizationPlanLimit(current.membership.organizationId, "maxUsers");
+    if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
+  }
 
   const removingOwner = target.role === "OWNER" && ((data.role && data.role !== "OWNER") || data.status === "SUSPENDED");
   if (removingOwner) {
