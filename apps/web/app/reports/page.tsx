@@ -31,6 +31,9 @@ function csvCell(value: unknown) {
   const text = String(value ?? "");
   return '"' + text.replace(/"/g, '""') + '"';
 }
+function xmlEscape(value: unknown) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
 
 export default function ReportsPage() {
   const initialTo = new Date();
@@ -97,6 +100,29 @@ export default function ReportsPage() {
     anchor.click(); URL.revokeObjectURL(url);
   }
 
+  function exportExcel() {
+    if (!data) return;
+    const rows: Array<Array<{ value: string; type?: "Number" | "String" }>> = [];
+    const addRow = (...values: Array<string | number>) => rows.push(values.map(value => ({
+      value: String(value), type: typeof value === "number" ? "Number" as const : "String" as const,
+    })));
+    addRow("InvoiceFlow · Relatório financeiro", "Período", from + " até " + to);
+    addRow("Resumo por moeda");
+    addRow("Moeda", "Entradas", "Despesas operacionais", "Pagamentos fornecedores", "Fluxo líquido", "Facturação", "Por receber", "Recebimentos em atraso", "Por pagar", "Pagamentos em atraso");
+    for (const item of visibleSummary) addRow(item.currency, ...[item.cashIn,item.operatingExpenses,item.supplierPayments,item.netCashFlow,item.invoiced,item.receivables,item.overdueReceivables,item.payables,item.overduePayables].map(Number));
+    addRow("Despesas por categoria");
+    addRow("Moeda", "Categoria", "Valor");
+    for (const item of categories) addRow(item.currency, item.category, Number(item.amount));
+    addRow("Fluxo mensal");
+    addRow("Mês", "Moeda", "Entradas", "Saídas");
+    for (const item of (data.timeline ?? []).filter(item => currency === "ALL" || item.currency === currency)) addRow(item.month,item.currency,Number(item.inflows),Number(item.outflows));
+    const worksheet = rows.map(row => "<Row>" + row.map(cell => "<Cell><Data ss:Type=\"" + (cell.type ?? "String") + "\">" + xmlEscape(cell.value) + "</Data></Cell>").join("") + "</Row>").join("");
+    const xml = '<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Relatório"><Table>' + worksheet + '</Table></Worksheet></Workbook>';
+    const url = URL.createObjectURL(new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "invoiceflow-relatorio-financeiro.xls";
+    anchor.click(); URL.revokeObjectURL(url);
+  }
+
   const cards = [
     { label: "Entradas recebidas", key: "cashIn" as const, hint: "Pagamentos confirmados no período" },
     { label: "Despesas pagas", key: "operatingExpenses" as const, hint: "Despesas operacionais registadas" },
@@ -109,13 +135,24 @@ export default function ReportsPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-[1500px]">
+    <main className="mx-auto max-w-[1500px] print:max-w-none print:bg-white print:text-black">
+      <style jsx global>{`@media print {
+        body { background: white !important; color: #111827 !important; }
+        aside, nav, header a, button, input, select { display: none !important; }
+        main { max-width: none !important; padding: 0 !important; }
+        article, section { break-inside: avoid; box-shadow: none !important; background: white !important; color: #111827 !important; border-color: #d1d5db !important; }
+        p, h1, h2, td, th, span { color: #111827 !important; }
+      }`}</style>
       <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div><Link href="/dashboard" className="text-xs text-indigo-300 hover:text-white">← Visão geral</Link>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Relatórios financeiros</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-400">Acompanha o dinheiro que entra e sai, a rentabilidade operacional e os saldos pendentes da empresa.</p>
         </div>
-        <button onClick={exportCsv} disabled={!data || loading} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-40">Exportar CSV ↓</button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => window.print()} disabled={!data || loading} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-40">Guardar PDF</button>
+          <button onClick={exportExcel} disabled={!data || loading} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-40">Exportar Excel ↓</button>
+          <button onClick={exportCsv} disabled={!data || loading} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-40">Exportar CSV ↓</button>
+        </div>
       </header>
 
       <section className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
