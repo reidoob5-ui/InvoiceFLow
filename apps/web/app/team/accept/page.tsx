@@ -6,13 +6,11 @@ import { CheckCircle2, LoaderCircle, ShieldCheck } from "lucide-react";
 
 export default function AcceptTeamInvitationPage(){
  const router=useRouter();
- const [token,setToken]=useState("");
  const [status,setStatus]=useState<"checking"|"accepted"|"error">("checking");
  const [message,setMessage]=useState("A validar o convite…");
  useEffect(()=>{
   let active=true;
   const currentToken=new URLSearchParams(window.location.search).get("token")||"";
-  setToken(currentToken);
   async function accept(){
    if(!currentToken){setStatus("error");setMessage("O link do convite não contém um código válido.");return;}
    try{
