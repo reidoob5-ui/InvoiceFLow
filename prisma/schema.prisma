@@ -905,6 +905,7 @@ model PlatformInvoice {
   periodEnd      DateTime?
   paidAt         DateTime?
   targetPlanId   String?
+  billingInterval BillingInterval @default(MONTHLY)
   provider       String?
   providerRef    String?
   targetPlan     Plan?                 @relation("PlatformInvoiceTargetPlan", fields: [targetPlanId], references: [id], onDelete: SetNull)
