@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
   const clientId = typeof body.clientId === "string" ? body.clientId : "";
   const client = await prisma.client.findFirst({ where: { id: clientId, organizationId, archivedAt: null } });
   if (!client) return NextResponse.json({ error: "Selecciona um cliente activo desta empresa." }, { status: 400 });
-  const organizationDefaults = await prisma.organization.findUnique({ where: { id: organizationId }, select: { invoiceTerms: true } });
+  const organizationDefaults = await prisma.organization.findUnique({ where: { id: organizationId }, select: { invoiceTerms: true, defaultPaymentTerms: true, invoiceNotes: true } });
   const currency = typeof body.currency === "string" ? body.currency.toUpperCase() : client.currency || current.membership.organization.currency;
   if (!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({ error: "Moeda inválida." }, { status: 400 });
-  const termsDays = Number(body.paymentTermsDays ?? 30);
+  const termsDays = Number(body.paymentTermsDays ?? organizationDefaults?.defaultPaymentTerms ?? 30);
   if (!Number.isInteger(termsDays) || termsDays < 0 || termsDays > 365) return NextResponse.json({ error: "Prazo de pagamento inválido." }, { status: 400 });
   const withholdingRate = Number(body.withholdingRate ?? 0);
   if (!Number.isFinite(withholdingRate) || withholdingRate < 0 || withholdingRate > 100) return NextResponse.json({ error: "Retenção inválida." }, { status: 400 });
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       data: {
         organizationId, clientId, createdById: current.user.id, status: "DRAFT", currency,
         paymentTermsDays: termsDays, withholdingRate,
-        notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 4000) || null : null,
+        notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 4000) || organizationDefaults?.invoiceNotes ?? null : organizationDefaults?.invoiceNotes ?? null,
         terms: typeof body.terms === "string" ? body.terms.trim().slice(0, 4000) || null : organizationDefaults?.invoiceTerms ?? null,
         ...calculated,
         lines: { create: calculated.lines },
