@@ -7,6 +7,8 @@ import { calculateBusinessPlan } from "@/lib/business-planner";
 import { ArrowRight, Calculator, CircleHelp, Download, Lightbulb, ShieldCheck, Target, Wallet } from "lucide-react";
 
 type Currency = "AOA" | "USD" | "EUR" | "GBP";
+
+type CashMovement = { currency: string; received: string; expenses: string; suppliers: string; net: string | null };
 const initial = { currency: "AOA" as Currency, capital: "500000", fixed: "120000", variable: "2500", price: "7500", units: "30", ownerPay: "100000", targetProfit: "100000", reserveMonths: "2" };
 
 function money(value: Decimal, currency: Currency) {
@@ -23,7 +25,7 @@ function Field({ label, hint, value, onChange, prefix, min = "0" }: { label: str
   </label>;
 }
 
-export default function BusinessPlannerPage() {
+export default function BusinessPlannerPage({ cashMovements }: { cashMovements: CashMovement[] }) {
   const [form, setForm] = useState(initial);
   const update = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) => setForm(old => ({ ...old, [key]: value }));
   const updateCurrency = (value: string) => {
@@ -59,6 +61,24 @@ export default function BusinessPlannerPage() {
         </div>
       </div>
     </header>
+
+    <section className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div><h2 className="text-lg font-semibold">Movimento real dos últimos 30 dias</h2><p className="mt-1 text-sm text-slate-400">Recebimentos confirmados, despesas pagas e pagamentos a fornecedores registados nesta organização.</p></div>
+        <span className="rounded-full border border-emerald-300/15 bg-emerald-300/[.06] px-3 py-1.5 text-xs text-emerald-100">Dados reais · por moeda</span>
+      </div>
+      {cashMovements.length ? <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {cashMovements.map(item => <article key={item.currency} className="rounded-xl border border-white/[.08] bg-[#080f1d]/70 p-4">
+          <div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-white">{item.currency}</h3><span className={`text-sm font-semibold ${item.net === null ? "text-amber-200" : Number(item.net) >= 0 ? "text-emerald-200" : "text-rose-200"}`}>{item.net === null ? "Saldo não calculado" : money(new Decimal(item.net), item.currency)}</span></div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+            <div><p className="text-slate-500">Recebido</p><p className="mt-1 font-medium text-slate-200">{money(new Decimal(item.received), item.currency)}</p></div>
+            <div><p className="text-slate-500">Despesas</p><p className="mt-1 font-medium text-slate-200">{money(new Decimal(item.expenses), item.currency)}</p></div>
+            <div><p className="text-slate-500">Fornecedores</p><p className="mt-1 font-medium text-slate-200">{money(new Decimal(item.suppliers), item.currency)}</p></div>
+          </div>
+        </article>)}
+      </div> : <p className="mt-5 rounded-xl border border-white/[.07] p-4 text-sm text-slate-400">Ainda não existem movimentos registados nos últimos 30 dias. Quando confirmares recebimentos e pagamentos, os valores aparecerão aqui.</p>}
+      <p className="mt-4 text-xs leading-5 text-slate-500">Este painel mostra movimentos registados, não o saldo bancário. As moedas nunca são somadas nem convertidas. Se o histórico de pagamentos a fornecedores exceder o limite de leitura, o saldo líquido fica oculto para evitar um resultado incompleto.</p>
+    </section>
 
     <section className="grid gap-6 xl:grid-cols-[1fr_.9fr]">
       <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-7">
