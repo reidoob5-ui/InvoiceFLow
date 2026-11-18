@@ -16,10 +16,12 @@ async function main() {
         description: plan.description,
         monthlyPrice: plan.monthlyPrice,
         yearlyPrice: plan.yearlyPrice,
+        currency: plan.currency,
         trialDays: plan.trialDays,
         limits: plan.limits,
         features: plan.features,
         sortOrder: plan.sortOrder,
+        isPublic: true,
       },
       create: {
         key: plan.key,
@@ -27,14 +29,22 @@ async function main() {
         description: plan.description,
         monthlyPrice: plan.monthlyPrice,
         yearlyPrice: plan.yearlyPrice,
+        currency: plan.currency,
         trialDays: plan.trialDays,
         limits: plan.limits,
         features: plan.features,
         sortOrder: plan.sortOrder,
+        isPublic: true,
       },
     });
   }
-  console.log(`Planos sincronizados: ${DEFAULT_PLANS.length}`);
+
+  await prisma.plan.updateMany({
+    where: { key: { notIn: DEFAULT_PLANS.map((plan) => plan.key) } },
+    data: { isPublic: false },
+  });
+
+  console.log(`Planos públicos sincronizados: ${DEFAULT_PLANS.length}`);
 }
 
 main().catch((error) => {

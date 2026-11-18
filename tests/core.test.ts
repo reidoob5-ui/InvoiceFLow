@@ -247,7 +247,7 @@ describe("plans", () => {
   it("enforces limits and treats null as unlimited", () => {
     expect(checkLimit(free, "maxInvoicesPerMonth", 4)).toEqual({ allowed: true, remaining: 0 });
     expect(checkLimit(free, "maxInvoicesPerMonth", 5)).toEqual({ allowed: false, limit: 5, used: 5 });
-    expect(checkLimit(DEFAULT_PLANS[4].limits, "maxUsers", 9999)).toEqual({ allowed: true, remaining: null });
+    expect(checkLimit({ ...free, maxUsers: null }, "maxUsers", 9999)).toEqual({ allowed: true, remaining: null });
   });
   it("evaluates subscription access incl. trial, grace and cancel-at-period-end", () => {
     const now = new Date("2026-11-17");
