@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const archived = request.nextUrl.searchParams.get("archived") === "true";
   const clients = await prisma.client.findMany({
     where: {
-      organizationId: current.membership.organizationId,
+      organizationId,
       archivedAt: archived ? { not: null } : null,
       ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, { taxId: { contains: q, mode: "insensitive" as const } }] } : {}),
     },
