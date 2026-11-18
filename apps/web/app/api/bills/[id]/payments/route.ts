@@ -22,8 +22,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const method = typeof body?.method === "string" && methods.includes(body.method as typeof methods[number]) ? body.method as typeof methods[number] : "BANK_TRANSFER";
   const reference = typeof body?.reference === "string" ? body.reference.trim().slice(0, 120) || null : null;
   const paidAt = typeof body?.paidAt === "string" ? new Date(body.paidAt) : new Date();
-  if (!amountText || !Number.isFinite(Number(amountText)) || Number(amountText) <= 0 || Number(amountText) > 999999999999 || Number.isNaN(paidAt.getTime())) return NextResponse.json({ error: "Indica um valor e uma data de pagamento válidos." }, { status: 400 });
-  const amount = D(amountText).toDecimalPlaces(2);
+  if (!/^(?:0|[1-9]\\d{0,11})(?:\\.\\d{1,2})?$/.test(amountText) || Number.isNaN(paidAt.getTime())) return NextResponse.json({ error: "Indica um valor positivo com, no máximo, duas casas decimais e uma data válida." }, { status: 400 });
+  const amount = D(amountText);
   if (!amount.isFinite() || amount.lte(0)) return NextResponse.json({ error: "Valor inválido." }, { status: 400 });
   const organizationId = current.membership.organizationId;
   const result = await retryOnConflict(() => prisma.$transaction(async tx => {
