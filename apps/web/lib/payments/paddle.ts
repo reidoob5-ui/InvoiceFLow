@@ -62,3 +62,27 @@ export function verifyPaddleWebhook(rawBody: string, signatureHeader: string | n
     return a.length === b.length && timingSafeEqual(a, b);
   });
 }
+
+
+export type PaddleSubscriptionStatus = "active" | "canceled" | "paused" | "past_due" | "trialing";
+
+/** Resolve both dedicated Paddle lifecycle events and the subscription.updated catch-all. */
+export function paddleSubscriptionStatus(
+  eventType: string,
+  dataStatus: unknown,
+): PaddleSubscriptionStatus | null {
+  switch (eventType) {
+    case "subscription.canceled": return "canceled";
+    case "subscription.paused": return "paused";
+    case "subscription.past_due": return "past_due";
+    case "subscription.activated":
+    case "subscription.resumed": return "active";
+    case "subscription.trialing": return "trialing";
+    case "subscription.created":
+    case "subscription.updated":
+      return dataStatus === "active" || dataStatus === "canceled" ||
+        dataStatus === "paused" || dataStatus === "past_due" ||
+        dataStatus === "trialing" ? dataStatus : null;
+    default: return null;
+  }
+}

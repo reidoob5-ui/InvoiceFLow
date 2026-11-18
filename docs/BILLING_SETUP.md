@@ -33,7 +33,13 @@ Paddle is used as merchant of record for international SaaS subscriptions. Paddl
 3. Use Paddle sandbox first. Copy the four price IDs into the environment variables below.
 4. Create a Paddle notification destination for https://YOUR_DOMAIN/api/webhooks/paddle and subscribe to at least:
    - transaction.completed
+   - subscription.created
    - subscription.updated
+   - subscription.activated
+   - subscription.trialing
+   - subscription.past_due
+   - subscription.paused
+   - subscription.resumed
    - subscription.canceled
 5. Copy the notification destination secret into PADDLE_WEBHOOK_SECRET.
 6. Only switch PADDLE_ENV to production after Paddle approves the merchant and the live catalog/webhook are verified.
