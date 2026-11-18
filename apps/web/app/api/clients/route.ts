@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentSession, audit } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
+import { checkOrganizationPlanLimit, planLimitResponse } from "@/lib/plan-access";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest) {
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase().slice(0, 254) : "";
   if (name.length < 2) return NextResponse.json({ error: "O nome deve ter pelo menos 2 caracteres." }, { status: 400 });
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
+  const planLimit = await checkOrganizationPlanLimit(current.membership.organizationId, "maxClients");
+  if (!planLimit.allowed) return NextResponse.json(planLimitResponse(planLimit), { status: 402 });
   const client = await prisma.client.create({
     data: {
       organizationId: current.membership.organizationId,
