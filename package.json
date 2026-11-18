@@ -51,7 +51,8 @@
   "overrides": {
     "next": {
       "postcss": "8.5.33"
-    }
+    },
+    "deepmerge-ts": "^8.0.2"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"
