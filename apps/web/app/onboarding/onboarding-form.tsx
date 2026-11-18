@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2, Sparkles } from "lucide-react";
 import { DEFAULT_PLANS } from "@/lib/plans";
-const planFor = (key:string) => DEFAULT_PLANS.find(plan => plan.key === key) ?? DEFAULT_PLANS[0];
 const planNames:Record<string,string> = Object.fromEntries(DEFAULT_PLANS.map(plan => [plan.key, plan.name]));
 const planPrices:Record<string,string> = Object.fromEntries(DEFAULT_PLANS.map(plan => [plan.key, plan.monthlyPrice === 0 ? "Sem custos" : new Intl.NumberFormat("pt-AO", { style:"currency", currency:plan.currency, maximumFractionDigits:0 }).format(plan.monthlyPrice) + " / mês"]));
 const planTrials:Record<string,string> = Object.fromEntries(DEFAULT_PLANS.filter(plan => plan.trialDays > 0).map(plan => [plan.key, `${plan.trialDays} dias de avaliação incluídos`]));
