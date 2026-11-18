@@ -53,7 +53,7 @@ export default function TaxesPage() {
   return <main className="min-h-screen">
     <header className="border-b border-white/10 bg-slate-950/50 px-5 py-5 sm:px-8">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-        <div><Link href="/" className="text-sm text-indigo-300">← Dashboard</Link><h1 className="mt-2 text-2xl font-semibold">Impostos e taxas</h1><p className="mt-1 text-sm text-slate-400">Configura taxas fiscais da tua organização e define a taxa padrão.</p></div>
+        <div><Link href="/dashboard" className="text-sm text-indigo-300">← Dashboard</Link><h1 className="mt-2 text-2xl font-semibold">Impostos e taxas</h1><p className="mt-1 text-sm text-slate-400">Configura taxas fiscais da tua organização e define a taxa padrão.</p></div>
         <button onClick={() => { setEditing(null); setForm(empty); setShow(true); }} className="rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold">+ Nova taxa</button>
       </div>
     </header>
