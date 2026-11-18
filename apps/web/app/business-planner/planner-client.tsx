@@ -26,6 +26,11 @@ function Field({ label, hint, value, onChange, prefix, min = "0" }: { label: str
 export default function BusinessPlannerPage() {
   const [form, setForm] = useState(initial);
   const update = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) => setForm(old => ({ ...old, [key]: value }));
+  const updateCurrency = (value: string) => {
+    if (value === "AOA" || value === "USD" || value === "EUR" || value === "GBP") {
+      update("currency", value);
+    }
+  };
   const result = useMemo(() => calculateBusinessPlan(form), [form]);
   const currency = form.currency;
   const positiveProfit = result.monthlyProfit.gte(0);
