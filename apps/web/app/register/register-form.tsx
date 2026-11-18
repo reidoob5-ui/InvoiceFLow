@@ -3,7 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
-const planNames:Record<string,string>={free:"Gratuito",pro:"Pro",business:"Business"};\nconst planPrices:Record<string,string>={free:"Sem custos",pro:"19.000 Kz / mês",business:"32.000 Kz / mês"};
+const planNames:Record<string,string>={free:"Gratuito",pro:"Pro",business:"Business"};
+const planPrices:Record<string,string>={free:"Sem custos",pro:"19.000 Kz / mês",business:"32.000 Kz / mês"};
 export default function RegisterForm({selectedPlanKey}:{selectedPlanKey:string}){
  const router=useRouter();const [name,setName]=useState("");const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [error,setError]=useState("");const [busy,setBusy]=useState(false);
  async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setBusy(true);setError("");try{
