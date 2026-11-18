@@ -45,6 +45,29 @@ export async function GET(request: NextRequest) {
   if (from && to && from > to) return NextResponse.json({ error: "A data inicial não pode ser posterior à data final." }, { status: 400 });
 
   const paymentDate = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+  // The report queries below intentionally cap returned rows to protect the database.
+  // Never present capped data as a complete financial report: ask the user to narrow the period.
+  const [paymentCount, expenseCount, billPaymentCount, invoiceCount, billCount] = await Promise.all([
+    prisma.payment.count({ where: { organizationId, status: "CONFIRMED", receivedAt: paymentDate } }),
+    prisma.expense.count({ where: { organizationId, status: "PAID", billId: null, date: paymentDate } }),
+    prisma.billPayment.count({ where: { organizationId, paidAt: paymentDate } }),
+    prisma.invoice.count({ where: { organizationId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] },
+      ...(to ? { issueDate: { lte: to } } : {}), ...(from ? { issueDate: { gte: from } } : {}) } }),
+    prisma.bill.count({ where: { organizationId, status: { in: ["OPEN", "PARTIALLY_PAID"] },
+      ...(to ? { issueDate: { lte: to } } : {}), ...(from ? { issueDate: { gte: from } } : {}) } }),
+  ]);
+  const rowLimits = { payments: 5000, expenses: 5000, supplierPayments: 5000, invoices: 2000, bills: 2000 };
+  const rowCounts = { payments: paymentCount, expenses: expenseCount, supplierPayments: billPaymentCount, invoices: invoiceCount, bills: billCount };
+  const exceeded = Object.entries(rowLimits).filter(([key, limit]) => rowCounts[key as keyof typeof rowCounts] > limit);
+  if (exceeded.length) {
+    return NextResponse.json({
+      error: "O período seleccionado contém demasiados registos para um relatório completo. Reduz o intervalo de datas e tenta novamente.",
+      code: "REPORT_RANGE_TOO_LARGE",
+      limits: rowLimits,
+      counts: rowCounts,
+      exceeded: exceeded.map(([key]) => key),
+    }, { status: 422 });
+  }
   const [payments, expenses, billPayments, invoices, bills] = await Promise.all([
     prisma.payment.findMany({
       where: { organizationId, status: "CONFIRMED", receivedAt: paymentDate },
