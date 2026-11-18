@@ -1,84 +1,46 @@
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { getCurrentSession } from "@/lib/auth/session";
-
-function money(value: number, currency: string) {
-  return new Intl.NumberFormat("pt-PT", { style: "currency", currency }).format(value);
-}
-
-export default async function Home() {
-  const current = await getCurrentSession();
-  if (!current) redirect("/login");
-  if (!current.membership) redirect("/onboarding");
-
-  const membership = current.membership;
-  const organizationId = membership.organizationId;
-  const currency = membership.organization.currency || "USD";
-  const [totals, clientCount, paidCount, recentInvoices, sixMonthInvoices] = await Promise.all([
-    prisma.invoice.aggregate({
-      where: { organizationId, status: { not: "VOID" } },
-      _sum: { total: true, amountPaid: true },
-      _count: { _all: true },
-    }),
-    prisma.client.count({ where: { organizationId, archivedAt: null } }),
-    prisma.invoice.count({ where: { organizationId, status: "PAID" } }),
-    prisma.invoice.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      select: { id: true, number: true, total: true, currency: true, status: true, createdAt: true, client: { select: { name: true } } },
-    }),
-    prisma.invoice.findMany({
-      where: { organizationId, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1) }, status: { not: "VOID" } },
-      select: { total: true, createdAt: true },
-    }),
-  ]);
-
-  const revenue = Number(totals._sum.amountPaid ?? 0);
-  const outstanding = Math.max(0, Number(totals._sum.total ?? 0) - revenue);
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index));
-    return { key: `${date.getFullYear()}-${date.getMonth()}`, label: new Intl.DateTimeFormat("pt", { month: "short" }).format(date), amount: 0 };
-  });
-  for (const invoice of sixMonthInvoices) {
-    const key = `${invoice.createdAt.getFullYear()}-${invoice.createdAt.getMonth()}`;
-    const month = months.find((item) => item.key === key);
-    if (month) month.amount += Number(invoice.total);
-  }
-  const maxMonth = Math.max(1, ...months.map((month) => month.amount));
-  const statusLabel: Record<string, string> = { DRAFT: "Rascunho", ISSUED: "Emitida", PARTIALLY_PAID: "Parcial", PAID: "Paga", OVERDUE: "Vencida", VOID: "Anulada" };
-
-  return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[250px_1fr]">
-      <aside className="hidden border-r border-white/10 bg-slate-950/40 p-6 lg:flex lg:flex-col">
-        <div className="mb-12 flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500 text-lg font-black">I</div><div><div className="text-lg font-semibold tracking-tight">InvoiceFlow</div><div className="text-xs text-slate-500">FINANCE WORKSPACE</div></div></div>
-        <div className="mb-3 text-[10px] font-semibold tracking-[.2em] text-slate-500">ESPAÇO DE TRABALHO</div>
-        <nav className="space-y-2 text-sm">
-          <a className="flex items-center gap-3 rounded-xl bg-indigo-500/15 px-4 py-3 font-medium text-indigo-200" href="/">Visão geral</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/invoices">Facturas</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/clients">Clientes</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/products">Produtos e serviços</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/taxes">Impostos e taxas</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/suppliers">Fornecedores</a>
-          <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 hover:bg-white/5" href="/expenses">Despesas</a>
-        </nav>
-        <div className="mt-auto rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4"><div className="mb-2 text-sm font-semibold">{membership.organization.name}</div><p className="text-xs leading-5 text-slate-400">{current.user.email}</p><form action="/api/auth/logout" method="post" className="mt-4"><button className="text-xs text-indigo-300 hover:text-indigo-200">Terminar sessão</button></form></div>
-      </aside>
-      <section className="mx-auto w-full max-w-[1500px] px-5 py-7 sm:px-8 lg:px-10">
-        <header className="mb-10 flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-slate-500">{new Intl.DateTimeFormat("pt-PT", { dateStyle: "full" }).format(new Date())}</p><h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Olá, {current.user.name || current.user.email.split("@")[0]}</h1><p className="mt-2 text-sm text-slate-400">Resumo financeiro de {membership.organization.name}.</p></div><a href="/invoices/new" className="rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold shadow-lg shadow-indigo-950/40 hover:bg-indigo-400">+ Criar factura</a></header>
-        <div className="mb-6"><h2 className="text-lg font-semibold">Visão financeira</h2><p className="mt-1 text-xs text-slate-500">Valores calculados a partir dos registos da tua empresa.</p></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[{label:"Recebido",value:money(revenue,currency)},{label:"Por receber",value:money(outstanding,currency)},{label:"Clientes activos",value:String(clientCount)},{label:"Facturas pagas",value:String(paidCount)}].map((item)=><div key={item.label} className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10"><div className="text-sm text-slate-400">{item.label}</div><div className="mt-5 text-2xl font-semibold tracking-tight">{item.value}</div><div className="mt-2 text-xs text-slate-500">Dados reais · {membership.organization.name}</div></div>)}
-        </div>
-        <div className="mt-6 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">Facturação recente</h3><p className="mt-1 text-xs text-slate-500">Total de documentos criados nos últimos seis meses</p><div className="mt-8 flex h-48 items-end gap-3">{months.map((month)=><div key={month.key} className="flex h-full flex-1 flex-col justify-end"><div title={money(month.amount,currency)} className="w-full rounded-t-md bg-gradient-to-t from-indigo-600/60 to-indigo-400" style={{height:`${Math.max(3,month.amount/maxMonth*100)}%`}}/><span className="mt-3 text-center text-[10px] text-slate-500">{month.label}</span></div>)}</div></div>
-          <div className="rounded-2xl border border-white/10 bg-slate-900/65 p-5 sm:p-6"><h3 className="font-semibold">A tua empresa</h3><p className="mt-1 text-xs text-slate-500">Espaço de trabalho activo</p><div className="mt-6"><div className="text-xl font-semibold">{membership.organization.name}</div><div className="mt-2 text-sm text-slate-400">{membership.role}</div><div className="mt-4 rounded-xl border border-white/10 p-3 text-xs text-slate-500">Moeda principal: {currency}</div></div></div>
-        </div>
-        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65"><div className="border-b border-white/10 p-5"><h3 className="font-semibold">Facturas recentes</h3><p className="mt-1 text-xs text-slate-500">Os últimos documentos da empresa</p></div>
-          {recentInvoices.length===0?<div className="p-8 text-center"><p className="font-medium">Ainda não existem facturas</p><p className="mt-2 text-sm text-slate-500">Quando criares documentos, eles aparecerão aqui.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-sm"><thead className="bg-white/[.02] text-xs text-slate-500"><tr><th className="px-5 py-3 font-medium">Documento</th><th className="px-5 py-3 font-medium">Cliente</th><th className="px-5 py-3 font-medium">Data</th><th className="px-5 py-3 font-medium">Total</th><th className="px-5 py-3 font-medium">Estado</th></tr></thead><tbody>{recentInvoices.map((invoice)=><tr key={invoice.id} className="border-t border-white/[.06]"><td className="px-5 py-4 font-medium text-slate-200">{invoice.number || "Rascunho"}</td><td className="px-5 py-4 text-slate-400">{invoice.client.name}</td><td className="px-5 py-4 text-slate-500">{new Intl.DateTimeFormat("pt-PT").format(invoice.createdAt)}</td><td className="px-5 py-4 font-medium">{money(Number(invoice.total),invoice.currency || currency)}</td><td className="px-5 py-4 text-slate-300">{statusLabel[invoice.status] || invoice.status}</td></tr>)}</tbody></table></div>}
-        </div>
-        <p className="mt-8 text-center text-[11px] text-slate-600">InvoiceFlow · Dados da empresa autenticada e isolada por organização</p>
-      </section>
-    </main>
-  );
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, BarChart3, Check, ChevronRight, CircleDollarSign, FileCheck2, FileText, Globe2, Layers3, LockKeyhole, ReceiptText, Sparkles, Users, WalletCards, Zap } from "lucide-react";
+const highlights=[
+ {icon:FileText,title:"Facturação inteligente",text:"Cria, organiza e acompanha facturas profissionais sem perder tempo."},
+ {icon:Users,title:"Clientes e produtos",text:"Mantém clientes, serviços, produtos e fornecedores num único espaço."},
+ {icon:BarChart3,title:"Controlo financeiro",text:"Percebe o que recebeste, o que falta receber e como o negócio evolui."},
+ {icon:Globe2,title:"Preparado para o mundo",text:"Trabalha com diferentes moedas e organiza a tua operação global."}
+];
+export default function HomePage(){
+ return <main className="overflow-hidden bg-[#070b14] text-white">
+  <section className="relative isolate min-h-[760px] overflow-hidden">
+   <div className="absolute inset-0 -z-20 bg-[url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=2200&q=85')] bg-cover bg-center opacity-25"/>
+   <div className="absolute inset-0 -z-10 bg-[linear-gradient(105deg,#070b14_8%,rgba(7,11,20,.94)_40%,rgba(7,11,20,.58)_100%)]"/>
+   <div className="absolute -left-40 top-24 -z-10 h-[420px] w-[420px] rounded-full bg-indigo-600/20 blur-[120px]"/><div className="absolute right-0 top-0 -z-10 h-[520px] w-[520px] rounded-full bg-cyan-500/10 blur-[140px]"/>
+   <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-8">
+    <Link href="/" className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 via-violet-500 to-cyan-400 text-xl font-black shadow-xl shadow-indigo-500/20">I</span><span><span className="block text-lg font-bold tracking-tight">InvoiceFlow</span><span className="block text-[9px] font-semibold tracking-[.25em] text-slate-500">FINANCE, IN MOTION</span></span></Link>
+    <div className="hidden items-center gap-8 text-sm text-slate-300 md:flex"><a href="#funcionalidades" className="hover:text-white">Funcionalidades</a><a href="#como-funciona" className="hover:text-white">Como funciona</a><Link href="/plans" className="hover:text-white">Planos</Link></div>
+    <div className="flex items-center gap-2"><Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white">Entrar</Link><Link href="/plans" className="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-100">Começar agora <ArrowUpRight className="ml-1 inline" size={15}/></Link></div>
+   </nav>
+   <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pb-32 lg:pt-20">
+    <div className="relative z-10"><div className="mb-7 inline-flex items-center gap-2 rounded-full border border-indigo-300/20 bg-indigo-400/10 px-4 py-2 text-xs font-semibold text-indigo-200"><Sparkles size={14}/> A nova forma de gerir o teu negócio</div>
+     <h1 className="max-w-3xl text-5xl font-semibold leading-[1.06] tracking-[-.055em] sm:text-6xl lg:text-[4.4rem]">As tuas finanças.<br/><span className="bg-gradient-to-r from-indigo-300 via-violet-300 to-cyan-200 bg-clip-text text-transparent">Finalmente em fluxo.</span></h1>
+     <p className="mt-7 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">Facturas, clientes, pagamentos e controlo financeiro numa plataforma simples, elegante e preparada para acompanhar o crescimento da tua empresa.</p>
+     <div className="mt-9 flex flex-wrap gap-3"><Link href="/plans" className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-500 px-6 py-4 text-sm font-bold shadow-xl shadow-indigo-950/60 transition hover:-translate-y-1">Escolher o meu plano <ArrowRight size={17} className="transition group-hover:translate-x-1"/></Link><a href="#funcionalidades" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[.04] px-6 py-4 text-sm font-semibold backdrop-blur-xl hover:bg-white/10">Explorar plataforma <ChevronRight size={16}/></a></div>
+     <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-xs text-slate-400"><span className="flex items-center gap-2"><Check size={14} className="text-emerald-300"/> Começa gratuitamente</span><span className="flex items-center gap-2"><Check size={14} className="text-emerald-300"/> Sem cartão para o plano grátis</span><span className="flex items-center gap-2"><LockKeyhole size={14} className="text-emerald-300"/> Dados protegidos</span></div>
+    </div>
+    <div className="relative mx-auto w-full max-w-[600px]"><div className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-indigo-500/25 via-violet-500/10 to-cyan-400/20 blur-3xl"/>
+     <div className="relative rounded-[2rem] border border-white/15 bg-[#101827]/85 p-3 shadow-[0_30px_100px_rgba(0,0,0,.6)] backdrop-blur-2xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 pb-4 pt-2"><div className="flex gap-2"><span className="h-2 w-2 rounded-full bg-rose-400"/><span className="h-2 w-2 rounded-full bg-amber-300"/><span className="h-2 w-2 rounded-full bg-emerald-400"/></div><span className="text-[10px] font-semibold tracking-[.18em] text-slate-500">INVOICEFLOW · OVERVIEW</span><span className="h-2 w-2 rounded-full bg-indigo-300"/></div>
+      <div className="p-4 sm:p-6"><div className="flex items-start justify-between"><div><p className="text-xs text-slate-400">Resumo financeiro</p><p className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Kz 8.450.000</p><p className="mt-2 text-xs text-emerald-300">↗ 18,6% <span className="text-slate-500">este mês</span></p></div><span className="rounded-xl border border-indigo-300/20 bg-indigo-400/10 p-3 text-indigo-200"><WalletCards size={22}/></span></div>
+       <div className="mt-7 grid grid-cols-3 gap-2"><div className="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><p className="text-[10px] text-slate-500">Recebido</p><p className="mt-2 text-sm font-semibold">5,2M</p><p className="mt-1 text-[9px] text-emerald-300">+12,4%</p></div><div className="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><p className="text-[10px] text-slate-500">Por receber</p><p className="mt-2 text-sm font-semibold">3,2M</p><p className="mt-1 text-[9px] text-amber-300">Em aberto</p></div><div className="rounded-xl border border-white/[.07] bg-white/[.035] p-3"><p className="text-[10px] text-slate-500">Clientes</p><p className="mt-2 text-sm font-semibold">248</p><p className="mt-1 text-[9px] text-cyan-300">Activos</p></div></div>
+       <div className="mt-6 rounded-2xl border border-white/[.07] bg-[#0b1220] p-4"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold">Fluxo de caixa</p><p className="mt-1 text-[10px] text-slate-500">Pré-visualização ilustrativa</p></div><span className="rounded-lg bg-white/[.05] px-2 py-1 text-[9px] text-slate-400">6 meses</span></div><div className="mt-5 flex h-28 items-end gap-2">{[36,52,44,70,58,86,66,94,73,100,82,91].map((height,i)=><div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-indigo-600/30 to-cyan-300" style={{height:height+"%"}}/>)}</div><div className="mt-3 flex justify-between text-[9px] text-slate-600"><span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span></div></div>
+       <div className="mt-4 flex items-center justify-between rounded-xl border border-white/[.07] bg-white/[.025] px-4 py-3"><div className="flex items-center gap-3"><span className="rounded-lg bg-emerald-400/10 p-2 text-emerald-300"><FileCheck2 size={16}/></span><div><p className="text-xs font-semibold">Factura #INV-0248</p><p className="mt-1 text-[10px] text-slate-500">Pagamento confirmado</p></div></div><span className="text-xs font-semibold text-emerald-300">+ 420.000 Kz</span></div>
+      </div>
+     </div>
+     <div className="float-card absolute -left-8 top-20 hidden items-center gap-3 rounded-2xl border border-white/15 bg-[#111c2e]/90 p-4 shadow-2xl backdrop-blur-xl sm:flex"><span className="rounded-xl bg-emerald-400/10 p-3 text-emerald-300"><CircleDollarSign size={22}/></span><div><p className="text-[10px] text-slate-400">Recebimentos</p><p className="text-sm font-bold">Sempre em dia</p></div></div>
+     <div className="float-card-delayed absolute -right-5 bottom-16 hidden items-center gap-3 rounded-2xl border border-white/15 bg-[#111c2e]/90 p-4 shadow-2xl backdrop-blur-xl sm:flex"><span className="rounded-xl bg-violet-400/10 p-3 text-violet-300"><Zap size={22}/></span><div><p className="text-[10px] text-slate-400">Gestão inteligente</p><p className="text-sm font-bold">Menos tarefas manuais</p></div></div>
+    </div>
+   </div>
+  </section>
+  <section id="funcionalidades" className="border-y border-white/[.06] bg-[#0b1220] py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="mx-auto max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[.25em] text-indigo-300">Tudo conectado</p><h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Mais controlo. Menos complicação.</h2><p className="mt-4 text-sm leading-7 text-slate-400">Ferramentas essenciais para gerir o ciclo financeiro do teu negócio, com uma experiência simples e visualmente clara.</p></div><div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{highlights.map(({icon:Icon,title,text},i)=><article key={title} className="group rounded-3xl border border-white/[.08] bg-gradient-to-b from-white/[.055] to-white/[.015] p-6 transition duration-300 hover:-translate-y-2 hover:border-indigo-300/30"><span className="mb-6 grid h-12 w-12 place-items-center rounded-2xl border border-indigo-300/15 bg-indigo-400/10 text-indigo-200 group-hover:scale-110"><Icon size={22}/></span><p className="mb-2 text-[10px] font-bold tracking-[.2em] text-slate-600">0{i+1}</p><h3 className="text-base font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-slate-400">{text}</p></article>)}</div></div></section>
+  <section id="como-funciona" className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-24 sm:px-8 lg:grid-cols-2"><div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=85')] bg-cover bg-center p-8 sm:p-12"><div className="absolute inset-0 bg-gradient-to-br from-[#0b1220]/95 via-[#0b1220]/80 to-indigo-950/60"/><div className="relative"><span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.2em] text-indigo-100">O teu negócio, organizado</span><div className="mt-10 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"><ReceiptText className="text-cyan-200" size={24}/><p className="mt-5 text-sm font-semibold">Facturas claras</p><p className="mt-1 text-xs text-slate-300">Do rascunho ao pagamento</p></div><div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"><Layers3 className="text-violet-200" size={24}/><p className="mt-5 text-sm font-semibold">Tudo num lugar</p><p className="mt-1 text-xs text-slate-300">Clientes, artigos e taxas</p></div></div></div></div><div><p className="text-xs font-bold uppercase tracking-[.25em] text-indigo-300">Começa em minutos</p><h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Uma plataforma que acompanha o teu ritmo.</h2><div className="mt-8 space-y-6">{[{n:"01",t:"Escolhe o plano",d:"Começa gratuitamente ou escolhe a capacidade de que precisas."},{n:"02",t:"Cria o teu espaço",d:"Regista a tua conta e configura a tua empresa em poucos passos."},{n:"03",t:"Gere com confiança",d:"Emite documentos, acompanha recebimentos e mantém tudo organizado."}].map(x=><div key={x.n} className="flex gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-indigo-300/20 bg-indigo-400/10 text-xs font-bold text-indigo-200">{x.n}</span><div><h3 className="font-semibold">{x.t}</h3><p className="mt-1 text-sm leading-6 text-slate-400">{x.d}</p></div></div>)}</div><Link href="/plans" className="mt-9 inline-flex items-center gap-2 text-sm font-bold text-indigo-300 hover:text-white">Ver os planos disponíveis <ArrowRight size={16}/></Link></div></section>
+  <section className="px-5 pb-24 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 rounded-[2rem] border border-indigo-300/15 bg-gradient-to-r from-indigo-600/20 via-violet-600/15 to-cyan-500/10 p-8 sm:p-12 md:flex-row"><div><p className="text-xs font-bold uppercase tracking-[.25em] text-indigo-200">O próximo passo é teu</p><h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Dá mais clareza às finanças do teu negócio.</h2><p className="mt-3 text-sm text-slate-300">Escolhe o teu plano e começa hoje.</p></div><Link href="/plans" className="inline-flex shrink-0 items-center gap-3 rounded-2xl bg-white px-6 py-4 text-sm font-bold text-slate-950 hover:-translate-y-1 hover:bg-indigo-100">Começar agora <ArrowRight size={17}/></Link></div></section>
+  <footer className="border-t border-white/[.07] bg-[#070b14] px-5 py-8 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-xs text-slate-500 sm:flex-row"><span>© {new Date().getFullYear()} InvoiceFlow. Todos os direitos reservados.</span><div className="flex gap-5"><Link href="/plans" className="hover:text-white">Planos</Link><Link href="/login" className="hover:text-white">Entrar</Link><Link href="/register?plan=free" className="hover:text-white">Criar conta</Link></div></div></footer>
+ </main>;
 }
