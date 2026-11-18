@@ -16,14 +16,9 @@ function dateParam(value: string | null, end = false): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function add(map: Map<string, number>, currency: string, amount: unknown) {
+function add(map: Map<string, ReturnType<typeof D>>, currency: string, amount: unknown) {
   const key = currency.toUpperCase();
-  map.set(key, (map.get(key) ?? 0) + Number(D(amount ?? 0).toFixed(2)));
-}
-
-function moneyRows(map: Map<string, number>): MoneyRow[] {
-  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-    .map(([currency, amount]) => ({ currency, amount: D(amount).toFixed(2) }));
+  map.set(key, (map.get(key) ?? D(0)).plus(D(amount ?? 0)));
 }
 
 export async function GET(request: NextRequest) {
@@ -53,7 +48,7 @@ export async function GET(request: NextRequest) {
       select: { amount: true, currency: true, receivedAt: true }, take: 5000,
     }),
     prisma.expense.findMany({
-      where: { organizationId, status: "PAID", date: paymentDate },
+      where: { organizationId, status: "PAID", billId: null, date: paymentDate },
       select: { amount: true, currency: true, date: true, category: { select: { name: true } } }, take: 5000,
     }),
     prisma.billPayment.findMany({
@@ -74,7 +69,7 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const cashIn = new Map<string, number>();
+  const cashIn = new Map<string, ReturnType<typeof D>>();
   const expenseOut = new Map<string, number>();
   const supplierOut = new Map<string, number>();
   const invoiced = new Map<string, number>();
@@ -83,30 +78,30 @@ export async function GET(request: NextRequest) {
   const payable = new Map<string, number>();
   const overduePayable = new Map<string, number>();
   const categoryTotals = new Map<string, number>();
-  const monthly = new Map<string, { inflows: number; outflows: number }>();
+  const monthly = new Map<string, { inflows: ReturnType<typeof D>; outflows: ReturnType<typeof D> }>();
 
   function monthBucket(date: Date, currency: string) {
     const month = date.toISOString().slice(0, 7);
     const key = month + "|" + currency.toUpperCase();
-    if (!monthly.has(key)) monthly.set(key, { inflows: 0, outflows: 0 });
+    if (!monthly.has(key)) monthly.set(key, { inflows: D(0), outflows: D(0) });
     return monthly.get(key)!;
   }
 
   for (const payment of payments) {
     add(cashIn, payment.currency, payment.amount);
-    monthBucket(payment.receivedAt, payment.currency).inflows += Number(payment.amount);
+    monthBucket(payment.receivedAt, payment.currency).inflows = monthBucket(payment.receivedAt, payment.currency).inflows.plus(payment.amount);
   }
   for (const expense of expenses) {
     add(expenseOut, expense.currency, expense.amount);
     const bucket = monthBucket(expense.date, expense.currency);
-    bucket.outflows += Number(expense.amount);
+    bucket.outflows = bucket.outflows.plus(expense.amount);
     const category = expense.category?.name ?? "Sem categoria";
     add(categoryTotals, expense.currency + "|" + category, expense.amount);
   }
   for (const payment of billPayments) {
     const currency = payment.bill.currency;
     add(supplierOut, currency, payment.amount);
-    monthBucket(payment.paidAt, currency).outflows += Number(payment.amount);
+    monthBucket(payment.paidAt, currency).outflows = monthBucket(payment.paidAt, currency).outflows.plus(payment.amount);
   }
 
   const now = new Date();
@@ -140,7 +135,7 @@ export async function GET(request: NextRequest) {
   const currencies = new Set([...cashIn.keys(), ...expenseOut.keys(), ...supplierOut.keys(), ...invoiced.keys(),
     ...receivable.keys(), ...overdueReceivable.keys(), ...payable.keys(), ...overduePayable.keys()]);
   const summary = [...currencies].sort().map(currency => {
-    const get = (map: Map<string, number>) => D(map.get(currency) ?? 0).toFixed(2);
+    const get = (map: Map<string, ReturnType<typeof D>>) => (map.get(currency) ?? D(0)).toFixed(2);
     return { currency, cashIn: get(cashIn), operatingExpenses: get(expenseOut), supplierPayments: get(supplierOut),
       netCashFlow: D(get(cashIn)).minus(get(expenseOut)).minus(get(supplierOut)).toFixed(2),
       invoiced: get(invoiced), receivables: get(receivable), overdueReceivables: get(overdueReceivable),
@@ -149,12 +144,12 @@ export async function GET(request: NextRequest) {
 
   const timeline: MonthRow[] = [...monthly.entries()].map(([key, value]) => {
     const [month, currency] = key.split("|");
-    return { month, currency, inflows: D(value.inflows).toFixed(2), outflows: D(value.outflows).toFixed(2) };
+    return { month, currency, inflows: value.inflows.toFixed(2), outflows: value.outflows.toFixed(2) };
   }).sort((a, b) => a.month.localeCompare(b.month) || a.currency.localeCompare(b.currency));
 
   const expensesByCategory = [...categoryTotals.entries()].map(([key, amount]) => {
     const separator = key.indexOf("|");
-    return { currency: key.slice(0, separator), category: key.slice(separator + 1), amount: D(amount).toFixed(2) };
+    return { currency: key.slice(0, separator), category: key.slice(separator + 1), amount: amount.toFixed(2) };
   }).sort((a, b) => a.currency.localeCompare(b.currency) || Number(b.amount) - Number(a.amount));
 
   return NextResponse.json({
