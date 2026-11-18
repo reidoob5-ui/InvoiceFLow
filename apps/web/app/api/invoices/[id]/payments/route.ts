@@ -19,11 +19,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
   const { id } = await context.params;
   const body = await request.json().catch(() => null);
-  const amount = Number(body?.amount);
+  const amountText = String(body?.amount ?? "").trim();
   const method = methods.includes(body?.method) ? body.method : "BANK_TRANSFER";
   const reference = typeof body?.reference === "string" ? body.reference.trim().slice(0, 120) || null : null;
   const notes = typeof body?.notes === "string" ? body.notes.trim().slice(0, 1000) || null : null;
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000000000) return NextResponse.json({ error: "O valor recebido deve ser superior a zero." }, { status: 400 });
+  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(amountText)) return NextResponse.json({ error: "Indica um valor positivo com, no máximo, duas casas decimais." }, { status: 400 });
+  const parsedAmount = D(amountText);
+  if (!parsedAmount.isFinite() || parsedAmount.lte(0)) return NextResponse.json({ error: "O valor recebido deve ser superior a zero." }, { status: 400 });
   const organizationId = current.membership.organizationId;
   const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findFirst({ where: { id, organizationId }, select: { id: true, clientId: true, status: true, total: true, amountPaid: true, currency: true, dueDate: true } });
@@ -32,8 +34,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const paid = await tx.payment.aggregate({ where: { invoiceId: id, organizationId, status: "CONFIRMED" }, _sum: { amount: true } });
     const currentPaid = D(paid._sum.amount);
     const remaining = balanceDue(invoice.total, currentPaid);
-    const paymentAmount = D(amount).toDecimalPlaces(2);
-    if (paymentAmount.gt(remaining)) return { error: "EXCEEDS_BALANCE" as const, remaining: remaining.toFixed(2) };
+    const paymentAmount = parsedAmount;
+    if (paymentAmount.gt(remaining)) return { error: "EXCEEDS_BALANCE" as const, remaining: remaining.toFixed(2), currency: invoice.currency };
     const payment = await tx.payment.create({
       data: { organizationId, invoiceId: id, clientId: invoice.clientId, amount: paymentAmount.toFixed(2), currency: invoice.currency, method, status: "CONFIRMED", reference, notes, createdById: current.user.id },
       select: { id: true, amount: true, currency: true, method: true, receivedAt: true, reference: true },
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if ("error" in result) {
     if (result.error === "NOT_FOUND") return NextResponse.json({ error: "Factura não encontrada." }, { status: 404 });
     if (result.error === "NOT_PAYABLE") return NextResponse.json({ error: "Só é possível receber pagamentos de facturas emitidas." }, { status: 409 });
-    return NextResponse.json({ error: `O valor excede o saldo em aberto (${result.remaining} ${current.membership.organization.currency}).` }, { status: 400 });
+    return NextResponse.json({ error: `O valor excede o saldo em aberto (${result.remaining} ${result.currency}).` }, { status: 400 });
   }
   await audit({ action: "invoice.payment_recorded", userId: current.user.id, organizationId, entityType: "Invoice", entityId: id, metadata: { paymentId: result.payment.id, amount: result.payment.amount } });
   return NextResponse.json(result, { status: 201 });
