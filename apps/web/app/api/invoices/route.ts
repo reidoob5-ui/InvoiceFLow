@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       data: {
         organizationId, clientId, createdById: current.user.id, status: "DRAFT", currency,
         paymentTermsDays: termsDays, withholdingRate,
-        notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 4000) || organizationDefaults?.invoiceNotes ?? null : organizationDefaults?.invoiceNotes ?? null,
-        terms: typeof body.terms === "string" ? body.terms.trim().slice(0, 4000) || null : organizationDefaults?.invoiceTerms ?? null,
+        notes: typeof body.notes === "string" ? (body.notes.trim().slice(0, 4000) || organizationDefaults?.invoiceNotes || null) : organizationDefaults?.invoiceNotes ?? null,
+        terms: typeof body.terms === "string" ? (body.terms.trim().slice(0, 4000) || organizationDefaults?.invoiceTerms || null) : organizationDefaults?.invoiceTerms ?? null,
         ...calculated,
         lines: { create: calculated.lines },
         events: { create: { userId: current.user.id, action: "created" } },
