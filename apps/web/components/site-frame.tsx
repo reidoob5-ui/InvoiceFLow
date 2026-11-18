@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards
 } from "lucide-react";
 
 const navigation = [
@@ -14,6 +14,8 @@ const navigation = [
   { href: "/clients", label: "Clientes", icon: Users, description: "Organiza contactos, histórico e relações comerciais.", accent: "from-violet-400 to-fuchsia-500" },
   { href: "/products", label: "Produtos e serviços", icon: Package, description: "Gere o catálogo, preços e serviços da tua empresa.", accent: "from-amber-300 to-orange-500" },
   { href: "/suppliers", label: "Fornecedores", icon: Truck, description: "Mantém fornecedores e parceiros sempre organizados.", accent: "from-emerald-300 to-teal-500" },
+  { href: "/expenses", label: "Despesas", icon: ReceiptText, description: "Regista custos e acompanha valores pagos e pendentes.", accent: "from-rose-300 to-pink-500" },
+  { href: "/bills", label: "Contas a pagar", icon: WalletCards, description: "Controla facturas de fornecedores, vencimentos e pagamentos.", accent: "from-amber-300 to-yellow-500" },
   { href: "/taxes", label: "Impostos e taxas", icon: ReceiptText, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
 ];
 
