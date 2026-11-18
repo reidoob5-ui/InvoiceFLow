@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { DEFAULT_PLANS, hasActiveAccess, type PlanLimits } from "@/lib/plans";
+import { isProxyPayConfigured } from "@/lib/payments/proxypay";
+import { isPaddleConfigured } from "@/lib/payments/paddle";
 
 export const runtime = "nodejs";
 
@@ -52,6 +54,10 @@ export async function GET() {
       hasAccess: hasActiveAccess(subscription, now),
     } : { status: "ACTIVE", interval: "MONTHLY", trialEndsAt: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, hasAccess: true },
     usage: { users: activeUsers + pendingInvitations, activeUsers, pendingInvitations, clients, invoices },
-    billingProviderConfigured: false,
+    billingProviderConfigured: isProxyPayConfigured() || isPaddleConfigured(),
+    billingProviders: {
+      multicaixa: isProxyPayConfigured(),
+      international: isPaddleConfigured(),
+    },
   });
 }

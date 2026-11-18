@@ -856,6 +856,7 @@ model Plan {
   isPublic      Boolean        @default(true)
   sortOrder     Int            @default(0)
   subscriptions Subscription[]
+  platformInvoices PlatformInvoice[] @relation("PlatformInvoiceTargetPlan")
 }
 
 model Coupon {
@@ -903,11 +904,28 @@ model PlatformInvoice {
   periodStart    DateTime?
   periodEnd      DateTime?
   paidAt         DateTime?
+  targetPlanId   String?
+  billingInterval BillingInterval @default(MONTHLY)
+  provider       String?
+  providerRef    String?
+  targetPlan     Plan?                 @relation("PlatformInvoiceTargetPlan", fields: [targetPlanId], references: [id], onDelete: SetNull)
   organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   subscription   Subscription?         @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   createdAt      DateTime              @default(now())
 
   @@index([organizationId, createdAt])
+  @@index([provider, providerRef])
+}
+
+model ProviderWebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventId     String
+  processedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([createdAt])
 }
 
 model UsageCounter {
