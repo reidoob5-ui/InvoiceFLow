@@ -1,7 +1,7 @@
 // Role-based access control. Roles map to a set of "resource:action" permissions.
 // Every protected server operation must call `can()` / `assertCan()` — the UI hiding a button is not security.
 
-export type Role = "OWNER" | "ADMIN" | "ACCOUNTANT" | "SALES" | "MEMBER";
+export type Role = "OWNER" | "ADMIN" | "ACCOUNTANT" | "SALES" | "MEMBER" | "VIEWER";
 
 export const RESOURCES = [
   "dashboard", "invoices", "quotes", "clients", "products", "payments", "expenses", "suppliers",
@@ -49,6 +49,11 @@ const GRANTS: Record<Role, Set<Permission>> = {
     ...all("clients", ["read"]),
     ...all("products", ["read"]),
     ...all("expenses", ["read", "write"]),
+    ...all("ai", ["read"]),
+  ]),
+  // Read-only profile (used by the public demo account): can look at everything, change nothing.
+  VIEWER: new Set<Permission>([
+    ...(["dashboard", "invoices", "quotes", "clients", "products", "payments", "expenses", "suppliers", "reports", "taxes"] as Resource[]).flatMap((r) => all(r, ["read"])),
     ...all("ai", ["read"]),
   ]),
 };

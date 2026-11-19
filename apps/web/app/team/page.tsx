@@ -6,7 +6,7 @@ import { ArrowLeft, Copy, MailPlus, RefreshCw, ShieldCheck, Users, Clock3 } from
 type Member = { id:string; role:string; status:string; createdAt:string; user:{id:string;name:string;email:string;lastLoginAt:string|null} };
 type Invitation = { id:string; email:string; role:string; expiresAt:string; createdAt:string };
 
-const roleLabels:Record<string,string> = { OWNER:"Proprietário", ADMIN:"Administrador", ACCOUNTANT:"Contabilista", SALES:"Comercial", MEMBER:"Membro" };
+const roleLabels:Record<string,string> = { OWNER:"Proprietário", ADMIN:"Administrador", ACCOUNTANT:"Contabilista", SALES:"Comercial", MEMBER:"Membro", VIEWER:"Leitor" };
 
 export default function TeamPage(){
  const [members,setMembers]=useState<Member[]>([]);

@@ -1,57 +1,54 @@
 # InvoiceFlow
 
-Premium global business-finance SaaS for invoicing, expenses, quotes, cash flow and AI-assisted operations.
+Multi-tenant SaaS for small-business finance: invoicing, quotes, expenses, supplier bills, collections, cash-flow insights and an AI assistant that answers from the company's own data. Portuguese-first (Angola/Lusophone market), built to be localised.
 
-## Product direction
+**Live demo:** open `/api/demo` on your deployment (read-only demo company with six months of fictional data).
 
-- Premium responsive web application; native Android/iOS are a later phase.
-- Multi-tenant SaaS and dedicated single-tenant deployments.
-- Strict server-side tenant isolation: every protected operation must resolve the organization from the authenticated session and verify membership.
-- International-ready currencies, locales, tax configuration and time zones.
+## What is included
+
+| Area | What it does |
+| --- | --- |
+| Sales | Invoices (draft → issued → paid, immutable snapshots), quotes convertible to invoices, clients, products/services, collections follow-up |
+| Purchases | Expenses, supplier bills, suppliers |
+| Finance | Taxes, reports, financial insights (overdue/at-risk alerts), business-health planner |
+| AI assistant | Chat over the organization's real data (read-only), monthly quota per plan, conversation history |
+| Team | Roles (Owner, Admin, Accountant, Sales, Member, Viewer), invitations, 2FA (TOTP), audit log |
+| SaaS billing | Plans and subscriptions, Paddle (international) and Multicaixa/ProxyPay (Angola) with a webhook lifecycle |
+| Platform admin | `/admin`: MRR, subscriptions per plan, signups, AI usage |
+| Public demo | One-click read-only demo company |
+
+The Prisma schema also contains models for recurring invoices, API keys and webhooks that are not yet exposed in the UI.
 
 ## Stack
 
-Next.js 15 · React 19 · TypeScript · Tailwind CSS 4 · Prisma 6 · PostgreSQL.
+Next.js 15 (App Router) · React 19 · TypeScript · Tailwind 4 · Prisma 6 (query compiler + `@prisma/adapter-pg`) · PostgreSQL (Neon works out of the box) · Vercel.
 
-## Setup
+## Quick start (local)
 
-Requirements: Node.js 20.9+ and PostgreSQL 16+.
+Requirements: Node 22, PostgreSQL 16+.
 
-1. Run `npm install`.
-2. Copy `.env.example` to `.env.local`; set `DATABASE_URL` and a random `APP_SECRET` (at least 32 characters).
-3. Run `npm run db:generate`.
-4. Run `npm run db:migrate` to create/apply the development migration.
-5. Run `npm run db:seed` to populate Free, Starter, Professional, Business and Enterprise plans.
-6. Run `npm run dev`.
+```bash
+npm install
+cp .env.example .env.local     # set DATABASE_URL and APP_SECRET (32+ random chars)
+npm run db:deploy              # apply committed migrations
+npm run db:seed                # create the Free / Pro / Business plans
+npm run dev
+```
 
-On Android, use GitHub Codespaces and a hosted PostgreSQL service; Docker/embedded PostgreSQL are intended for a computer or compatible cloud environment.
+## Deploy on Vercel + Neon (about 20 minutes)
 
-## Database commands
+See [`docs/HANDOVER.md`](docs/HANDOVER.md) for the step-by-step guide, required environment variables and the post-deploy checklist.
 
-- `npm run db:generate`: generate Prisma Client.
-- `npm run db:migrate`: create/apply a local development migration.
-- `npm run db:deploy`: apply committed migrations in deployment.
-- `npm run db:seed`: upsert the default subscription plans.
-- `npm run db:studio`: open Prisma Studio.
+## Scripts
 
-The Prisma schema is the data model, not a substitute for migrations. Do not deploy until a migration has been generated, reviewed and applied to a real PostgreSQL database.
+`npm run dev` · `npm run build` · `npm test` · `npm run typecheck` · `npm run lint` · `npm run db:deploy` · `npm run db:seed`
 
-## Quality
+## Security model
 
-`npm test`, `npm run typecheck`, `npm run lint` and `npm run build`. GitHub Actions runs these checks on implementation branches and pull requests.
+- The active organization is always resolved from the server-side session, never from client input.
+- Every protected route checks membership and a `resource:action` permission (`apps/web/lib/permissions.ts`).
+- Passwords use scrypt; sessions are stored hashed; login has lockout and per-IP rate limiting; optional TOTP 2FA.
+- Issued invoices keep an immutable snapshot. Plan limits are enforced server-side under advisory locks.
+- Secrets live in environment variables only.
 
-## Security requirements
-
-- Never trust an organization ID supplied by the browser.
-- Resolve the active organization from a valid server-side session.
-- Verify active membership and role on every protected operation.
-- Scope every tenant query by the authorized organization ID.
-- Keep issued-document snapshots immutable.
-- Keep secrets in environment variables; never commit credentials.
-
-## Current implementation status
-
-Core domain libraries and unit tests exist. Database bootstrap, user-facing workflows, tenant-scoped APIs, email delivery, payment integrations, AI workflows and production deployment are still being implemented in stages. A green unit-test run alone does not certify production readiness.
-
-## Recent implementation
-- Invoice drafts can be edited before issuance; issued documents remain locked from this editor.
+More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/BILLING_SETUP.md`](docs/BILLING_SETUP.md), [`docs/ROADMAP.md`](docs/ROADMAP.md).

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot, ShieldCheck
 } from "lucide-react";
 
 const navigation = [
@@ -21,6 +21,7 @@ const navigation = [
   { href: "/bills", label: "Contas a pagar", icon: WalletCards, description: "Controla facturas de fornecedores, vencimentos e pagamentos.", accent: "from-amber-300 to-yellow-500" },
   { href: "/taxes", label: "Impostos e taxas", icon: Percent, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, description: "Analisa o fluxo de caixa, despesas e saldos financeiros.", accent: "from-sky-300 to-cyan-500" },
+  { href: "/admin", label: "Administração", icon: ShieldCheck, description: "Receita, subscrições e utilizadores da plataforma.", accent: "from-rose-300 to-orange-400" },
   { href: "/ai", label: "InvoiceFlow AI", icon: Bot, description: "Pergunta ao assistente sobre recebimentos, atrasos e mensagens de cobrança.", accent: "from-indigo-300 to-cyan-400" },
   { href: "/insights", label: "Inteligência financeira", icon: Lightbulb, description: "Identifica riscos, vencimentos e acções prioritárias a partir dos teus registos.", accent: "from-amber-200 to-orange-400" },
   { href: "/team", label: "Equipa e acessos", icon: Users, description: "Gere membros, perfis de acesso e convites para a tua empresa.", accent: "from-cyan-300 to-blue-500" },
@@ -33,7 +34,7 @@ const groups: { title: string; hrefs: string[] }[] = [
   { title: "Vendas", hrefs: ["/invoices", "/quotes", "/collections", "/clients", "/products"] },
   { title: "Compras", hrefs: ["/expenses", "/bills", "/suppliers"] },
   { title: "Análise", hrefs: ["/reports", "/business-planner", "/taxes"] },
-  { title: "Conta", hrefs: ["/team", "/billing", "/settings"] },
+  { title: "Conta", hrefs: ["/team", "/billing", "/settings", "/admin"] },
 ];
 
 const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept"];
@@ -45,14 +46,14 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
-  const [identity, setIdentity] = useState<{ name: string; org: string } | null>(null);
+  const [identity, setIdentity] = useState<{ name: string; org: string; role: string; admin: boolean } | null>(null);
 
   const isPublic = publicPaths.some(path => pathname === path || (path !== "/" && pathname.startsWith(path + "/")));
   useEffect(() => {
     if (isPublic) return;
     let alive = true;
     fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).then(d => {
-      if (alive && d?.user) setIdentity({ name: d.user.name || d.user.email, org: d.activeOrganization?.name || "" });
+      if (alive && d?.user) setIdentity({ name: d.user.name || d.user.email, org: d.activeOrganization?.name || "", role: d.role || "", admin: !!d.user.isPlatformAdmin });
     }).catch(() => {});
     return () => { alive = false; };
   }, [isPublic]);
@@ -103,7 +104,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
           {groups.map(group => <div key={group.title}>
             {!collapsed && <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-slate-500">{group.title}</p>}
             <div className="space-y-1">
-              {group.hrefs.map(href => navigation.find(n => n.href === href)).filter((n): n is typeof navigation[number] => !!n).map(({ href, label, icon: Icon }) => {
+              {group.hrefs.map(href => navigation.find(n => n.href === href)).filter((n): n is typeof navigation[number] => !!n && (n.href !== "/admin" || !!identity?.admin)).map(({ href, label, icon: Icon }) => {
                 const active = pathname === href || pathname.startsWith(href + "/");
                 return <Link key={href} href={href} onClick={() => setMobileOpen(false)} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined}
                   className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-indigo-200 ring-1 ring-indigo-400/20" : "text-slate-400 hover:bg-white/[.06] hover:text-white"}`}>
@@ -149,6 +150,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
           </div>
           <div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[.06] px-3 py-1.5 sm:flex" title="Empresa activa"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/><span className="max-w-[200px] truncate text-[10px] font-medium text-emerald-200">{identity?.org || "Empresa"}</span></div>
         </header>
+        {identity?.role === "VIEWER" && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-xs text-amber-100 sm:px-7"><span><strong>Modo demonstração</strong> · dados fictícios, só leitura. Explora à vontade.</span><Link href="/plans" className="rounded-lg bg-white px-3 py-1.5 font-bold text-slate-950 hover:bg-indigo-100">Criar a minha conta grátis</Link></div>}
         <div className="animate-[page-enter_.42s_ease-out_both] px-4 pb-12 pt-5 sm:px-7 lg:px-9">{children}</div>
       </div>
     </div>

@@ -16,6 +16,7 @@ enum MembershipRole {
   ACCOUNTANT
   SALES
   MEMBER
+  VIEWER
 }
 
 enum MembershipStatus {
