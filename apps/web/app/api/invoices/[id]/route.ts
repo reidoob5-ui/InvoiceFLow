@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { audit, getCurrentSession } from "@/lib/auth/session";
 import { assertCan, ForbiddenError } from "@/lib/permissions";
 import { calculatePreparedLines, InvoiceInputError, prepareInvoiceLines } from "@/lib/invoices";
+import { retryOnConflict } from "@/lib/tx-retry";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };
@@ -34,9 +35,6 @@ export async function PATCH(request: NextRequest, context: Context) {
   }
   const { id } = await context.params;
   const organizationId = current.membership.organizationId;
-  const existing = await prisma.invoice.findFirst({ where: { id, organizationId }, select: { id: true, status: true } });
-  if (!existing) return NextResponse.json({ error: "Factura não encontrada." }, { status: 404 });
-  if (existing.status !== "DRAFT") return NextResponse.json({ error: "Só é possível editar facturas em rascunho." }, { status: 409 });
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   const clientId = typeof body.clientId === "string" ? body.clientId : "";
@@ -51,9 +49,15 @@ export async function PATCH(request: NextRequest, context: Context) {
   try {
     const lines = await prepareInvoiceLines(body.lines, organizationId, currency);
     const calculated = calculatePreparedLines(lines, withholdingRate);
-    const result = await prisma.$transaction(async (tx) => {
+    // The DRAFT check lives INSIDE a Serializable transaction. Checking outside left a window in which a
+    // concurrent issue could commit and this request would then rewrite the lines/totals of an issued invoice.
+    // On a conflict, Prisma raises P2034 and `retryOnConflict` re-reads the (now ISSUED) row and answers 409.
+    const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
+      const existing = await tx.invoice.findFirst({ where: { id, organizationId }, select: { status: true, type: true } });
+      if (!existing) return { error: "NOT_FOUND" as const };
+      if (existing.status !== "DRAFT" || existing.type !== "INVOICE") return { error: "NOT_DRAFT" as const };
       await tx.invoiceLine.deleteMany({ where: { invoiceId: id } });
-      return tx.invoice.update({
+      const invoice = await tx.invoice.update({
         where: { id },
         data: {
           clientId, paymentTermsDays: termsDays, withholdingRate,
@@ -65,9 +69,15 @@ export async function PATCH(request: NextRequest, context: Context) {
         },
         select: { id: true, status: true, currency: true, subtotal: true, discountTotal: true, taxTotal: true, withholdingTotal: true, total: true, updatedAt: true },
       });
-    });
+      return { invoice };
+    }, { isolationLevel: "Serializable" }));
+    if ("error" in result) {
+      return result.error === "NOT_FOUND"
+        ? NextResponse.json({ error: "Factura não encontrada." }, { status: 404 })
+        : NextResponse.json({ error: "Só é possível editar facturas em rascunho." }, { status: 409 });
+    }
     await audit({ action: "invoice.updated", userId: current.user.id, organizationId, entityType: "Invoice", entityId: id });
-    return NextResponse.json({ invoice: result });
+    return NextResponse.json({ invoice: result.invoice });
   } catch (error) {
     if (error instanceof InvoiceInputError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;

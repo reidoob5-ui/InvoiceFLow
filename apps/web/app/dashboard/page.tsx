@@ -19,7 +19,7 @@ export default async function Home() {
   const start = new Date(); start.setDate(1); start.setMonth(start.getMonth() - 5); start.setHours(0, 0, 0, 0);
   const [clients, paidInvoices, received, receivables, expenses, bills, recentInvoices, issuedInvoices] = await Promise.all([
     prisma.client.count({ where: { organizationId, archivedAt: null } }),
-    prisma.invoice.count({ where: { organizationId, status: "PAID" } }),
+    prisma.invoice.count({ where: { organizationId, type: "INVOICE", status: "PAID" } }),
     prisma.payment.groupBy({ by: ["currency"], where: { organizationId, status: "CONFIRMED" }, _sum: { amount: true } }),
     prisma.invoice.groupBy({ by: ["currency"], where: { organizationId, status: { in: ["ISSUED", "PARTIALLY_PAID", "OVERDUE"] } }, _sum: { total: true, amountPaid: true } }),
     prisma.expense.groupBy({ by: ["currency"], where: { organizationId, status: "PAID" }, _sum: { amount: true } }),

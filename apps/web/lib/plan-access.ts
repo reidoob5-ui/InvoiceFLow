@@ -85,7 +85,9 @@ export function withOrganizationPlanLimit<T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<PlanLimitExecution<T>> {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${organizationId}), hashtext(${key}))`;
+    // $executeRaw, not $queryRaw: the lock function returns `void`, which @prisma/adapter-pg cannot deserialize
+    // (it throws UnsupportedNativeDataType), and that made every plan-limited write fail.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${organizationId}), hashtext(${key}))`;
     const checked = await checkLimit(tx, organizationId, key, adding);
     if (!checked.allowed) return { allowed: false as const, result: checked };
     const value = await operation(tx);

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     prisma.payment.count({ where: { organizationId, status: "CONFIRMED", receivedAt: paymentDate } }),
     prisma.expense.count({ where: { organizationId, status: "PAID", billId: null, date: paymentDate } }),
     prisma.billPayment.count({ where: { organizationId, paidAt: paymentDate } }),
-    prisma.invoice.count({ where: { organizationId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] },
+    prisma.invoice.count({ where: { organizationId, type: "INVOICE", status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] },
       ...(to ? { issueDate: { lte: to } } : {}), ...(from ? { issueDate: { gte: from } } : {}) } }),
     prisma.bill.count({ where: { organizationId, status: { in: ["OPEN", "PARTIALLY_PAID"] },
       ...(to ? { issueDate: { lte: to } } : {}), ...(from ? { issueDate: { gte: from } } : {}) } }),
@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
       select: { amount: true, paidAt: true, bill: { select: { currency: true } } }, take: 5000,
     }),
     prisma.invoice.findMany({
-      where: { organizationId, status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] },
+      // Credit notes are settled by construction and already reduce the original invoice's open balance.
+      where: { organizationId, type: "INVOICE", status: { in: ["ISSUED", "PARTIALLY_PAID", "PAID", "OVERDUE"] },
         ...(to ? { issueDate: { lte: to } } : {}), ...(from ? { issueDate: { gte: from } } : {}) },
       select: { id: true, number: true, currency: true, total: true, amountPaid: true, dueDate: true, issueDate: true,
         client: { select: { name: true } } }, orderBy: { dueDate: "asc" }, take: 2000,

@@ -28,11 +28,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!parsedAmount.isFinite() || parsedAmount.lte(0)) return NextResponse.json({ error: "O valor recebido deve ser superior a zero." }, { status: 400 });
   const organizationId = current.membership.organizationId;
   const result = await retryOnConflict(() => prisma.$transaction(async (tx) => {
-    const invoice = await tx.invoice.findFirst({ where: { id, organizationId }, select: { id: true, clientId: true, status: true, total: true, amountPaid: true, currency: true, dueDate: true } });
+    const invoice = await tx.invoice.findFirst({ where: { id, organizationId }, select: { id: true, clientId: true, type: true, status: true, total: true, amountPaid: true, currency: true, dueDate: true } });
     if (!invoice) return { error: "NOT_FOUND" as const };
-    if (invoice.status === "DRAFT" || invoice.status === "VOID") return { error: "NOT_PAYABLE" as const };
-    const paid = await tx.payment.aggregate({ where: { invoiceId: id, organizationId, status: "CONFIRMED" }, _sum: { amount: true } });
-    const currentPaid = D(paid._sum.amount);
+    // Credit notes carry no receivable; drafts and voided invoices cannot be paid.
+    if (invoice.type !== "INVOICE" || invoice.status === "DRAFT" || invoice.status === "VOID") return { error: "NOT_PAYABLE" as const };
+    // `amountPaid` already includes credit notes applied to this invoice (see createCreditNote),
+    // and every writer updates it inside a Serializable transaction, so it is the source of truth here.
+    const currentPaid = D(invoice.amountPaid);
     const remaining = balanceDue(invoice.total, currentPaid);
     const paymentAmount = parsedAmount;
     if (paymentAmount.gt(remaining)) return { error: "EXCEEDS_BALANCE" as const, remaining: remaining.toFixed(2), currency: invoice.currency };
