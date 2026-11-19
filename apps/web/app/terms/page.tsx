@@ -1,0 +1,18 @@
+import type { Metadata } from "next";
+import LegalPage from "@/components/legal-page";
+
+export const metadata: Metadata = { title: "Termos de utilização", alternates: { canonical: "/terms" } };
+
+export default function TermsPage() {
+  return <LegalPage title="Termos de utilização" intro="Ao criar uma conta ou utilizar o InvoiceFlow, aceitas estes termos. Lê-os com atenção." sections={[
+    { title: "O serviço", body: ["O InvoiceFlow é uma aplicação web para gerir facturas, orçamentos, despesas, contas a pagar, cobranças e relatórios, com um assistente de inteligência artificial opcional.", "Podemos melhorar, alterar ou descontinuar funcionalidades. Avisaremos com antecedência razoável quando uma alteração prejudicar de forma significativa o uso que fazes do serviço."] },
+    { title: "Conta e segurança", body: ["És responsável pela veracidade dos dados da conta e por manter a palavra-passe confidencial. Recomendamos activar a autenticação em dois passos.", "Os administradores da tua empresa decidem quem tem acesso e com que perfil. És responsável pelas acções realizadas através das contas da tua equipa."] },
+    { title: "Planos, pagamentos e cancelamento", body: ["Alguns recursos dependem do plano contratado e têm limites (utilizadores, clientes, facturas e mensagens de IA por mês). Os preços e limites vigentes estão na página de planos.", "As subscrições renovam-se no fim de cada período até serem canceladas. Podes cancelar a qualquer momento; o acesso mantém-se até ao fim do período já pago, salvo disposição legal em contrário.", "Os pagamentos são processados por terceiros (por exemplo Paddle ou referência Multicaixa). Não guardamos dados completos de cartões."] },
+    { title: "Os teus dados", body: ["Os dados que introduzes (clientes, facturas, despesas, etc.) continuam a ser teus. Concedes-nos apenas a licença necessária para os armazenar e processar com o fim de prestar o serviço.", "Podes exportar e pedir a eliminação dos teus dados nos termos da Política de Privacidade."] },
+    { title: "Uso aceitável", body: ["Não podes usar o serviço para actividades ilegais, para tentar aceder a dados de outras empresas, contornar limites ou segurança, nem para enviar comunicações abusivas aos teus clientes.", "Podemos suspender contas que violem estes termos ou ponham em risco a segurança do serviço."] },
+    { title: "Assistente de IA", body: ["O assistente responde com base nos dados da tua empresa e pode errar. Verifica sempre valores, datas e textos antes de agir ou de os enviar a terceiros.", "O assistente só lê dados e redige sugestões; não executa acções em teu nome."] },
+    { title: "Limitações importantes", body: ["O InvoiceFlow é uma ferramenta de gestão, não presta aconselhamento fiscal, contabilístico ou jurídico. Tu és responsável por cumprir as obrigações fiscais e de facturação aplicáveis à tua actividade e ao teu país.", "Salvo indicação expressa em contrário, o serviço não está certificado por nenhuma autoridade fiscal como programa de facturação."] },
+    { title: "Disponibilidade e responsabilidade", body: ["Esforçamo-nos por manter o serviço disponível e seguro, mas é prestado “como está”, sem garantia de funcionamento ininterrupto.", "Na medida permitida pela lei, a nossa responsabilidade total perante ti limita-se ao valor pago pelo serviço nos 12 meses anteriores ao evento que deu origem à reclamação, e não abrange lucros cessantes nem danos indirectos."] },
+    { title: "Alterações e lei aplicável", body: ["Podemos actualizar estes termos; a versão em vigor é a publicada nesta página, com a data de actualização.", "Estes termos regem-se pela lei da jurisdição do operador do serviço, que deve ser indicada na versão final deste documento."] },
+  ]} />;
+}
