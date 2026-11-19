@@ -9,7 +9,7 @@
 
 ## 3. Vercel
 1. Import the repository. Framework: Next.js. Root directory: repository root.
-2. Build command `npm run build`, output directory `apps/web/.next` (already set in `vercel.json` if present).
+2. Build command `npm run build`; set **Output Directory** to `apps/web/.next` in the Vercel project settings (the app lives in `apps/web`).
 3. Add the environment variables below, then deploy.
 
 ## 4. Environment variables
