@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { can } from "@/lib/permissions";
 import { checkAiQuota } from "@/lib/plan-access";
-import AiChat from "./ai-chat";
+import AiWorkspace from "./ai-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +30,5 @@ export default async function AiPage() {
       <Link href="/plans" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-950"><Sparkles size={15}/> Ver planos</Link>
     </div>;
   }
-  return <AiChat conversationId={last?.id ?? null} initial={last?.messages ?? []} used={quota.used} limit={quota.limit} canWrite={canWrite} blocked={quota.allowed ? null : (quota.reason ?? null)} />;
+  return <AiWorkspace conversationId={last?.id ?? null} initial={last?.messages ?? []} used={quota.used} limit={quota.limit} canWrite={canWrite} blocked={quota.allowed ? null : (quota.reason ?? null)} />;
 }
