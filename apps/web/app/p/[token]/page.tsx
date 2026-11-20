@@ -10,8 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Factura", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
 const STATUS: Record<string, [string, string]> = {
-  ISSUED: ["Por pagar", "text-amber-300"], SENT: ["Por pagar", "text-amber-300"], VIEWED: ["Por pagar", "text-amber-300"],
-  PARTIAL: ["Pago parcialmente", "text-amber-300"], PAID: ["Pago", "text-emerald-300"], OVERDUE: ["Em atraso", "text-rose-300"],
+  ISSUED: ["Por pagar", "text-amber-300"], PARTIALLY_PAID: ["Pago parcialmente", "text-amber-300"], PAID: ["Pago", "text-emerald-300"], OVERDUE: ["Em atraso", "text-rose-300"],
 };
 
 /** Portal público do cliente: factura, saldo, instruções de pagamento e aviso de pagamento. Acesso por token imprevisível. */
