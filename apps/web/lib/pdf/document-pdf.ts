@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { formatDate, formatMoney } from "../money";
 import { t } from "../i18n";
+import { qrMatrix } from "../agt/qr-encode";
 
 // Plain data shape so the renderer has no dependency on the database layer and can be unit tested.
 export type PdfDocument = {
@@ -26,6 +27,8 @@ export type PdfDocument = {
   balanceDue?: string;
   notes?: string | null;
   terms?: string | null;
+  /** Facturação electrónica AGT: número fiscal, URL do QR e texto de rodapé. */
+  fiscal?: { documentNo: string; qrUrl: string; footer: string } | null;
 };
 
 const TITLES: Record<string, Record<PdfDocument["kind"], string>> = {
@@ -149,6 +152,21 @@ export function renderDocumentPdf(doc: PdfDocument): Promise<Buffer> {
       pdf.fillColor("#6b7280").fontSize(8).font("Helvetica-Bold").text(title.toUpperCase(), left, y);
       pdf.fillColor("#374151").fontSize(9).font("Helvetica").text(text, left, y + 11, { width });
       y = pdf.y + 10;
+    }
+
+    if (doc.fiscal) {
+      const matrix = qrMatrix(doc.fiscal.qrUrl);
+      const cell = 2.2;
+      const qrSize = matrix.length * cell;
+      if (y > pdf.page.height - qrSize - 80) { pdf.addPage(); y = 48; }
+      pdf.save();
+      pdf.rect(left - 4, y - 4, qrSize + 8, qrSize + 8).fill("#ffffff");
+      pdf.fillColor("#000000");
+      matrix.forEach((row, r) => row.forEach((on, c) => { if (on) pdf.rect(left + c * cell, y + r * cell, cell, cell).fill(); }));
+      pdf.restore();
+      pdf.fillColor("#374151").fontSize(9).font("Helvetica-Bold").text(doc.fiscal.documentNo, left + qrSize + 16, y + 6, { width: width - qrSize - 16 });
+      pdf.fillColor("#6b7280").fontSize(8).font("Helvetica").text(doc.fiscal.footer, left + qrSize + 16, pdf.y + 4, { width: width - qrSize - 16 });
+      y += qrSize + 12;
     }
 
     pdf.fontSize(7).fillColor("#9ca3af").text("Gerado com InvoiceFlow", left, pdf.page.height - 36, { width, align: "center", lineBreak: false });
