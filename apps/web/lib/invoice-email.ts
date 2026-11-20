@@ -35,7 +35,7 @@ export async function sendInvoiceEmail(input: {
   }
 
   const appUrl = (process.env.APP_URL ?? "").replace(/\/$/, "");
-  const link = appUrl ? `${appUrl}/api/public/invoices/${token}/pdf` : "(em anexo)";
+  const link = appUrl ? `${appUrl}/p/${token}` : "(em anexo)";
   const custom = await prisma.emailTemplate.findUnique({ where: { organizationId_key: { organizationId, key: kind } } });
   const template = custom ?? DEFAULT_TEMPLATES[kind];
   const locale = invoice.organization.locale;

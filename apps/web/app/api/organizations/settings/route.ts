@@ -10,7 +10,7 @@ const fields = {
   id: true, name: true, legalName: true, taxId: true, email: true, phone: true,
   website: true, addressLine1: true, addressLine2: true, city: true, postalCode: true,
   country: true, currency: true, timezone: true, locale: true, defaultPaymentTerms: true,
-  invoicePrefix: true, quotePrefix: true, invoiceNotes: true, invoiceTerms: true,
+  invoicePrefix: true, quotePrefix: true, invoiceNotes: true, invoiceTerms: true, paymentInstructions: true,
 } as const;
 
 function permission(role: string, action: "read" | "write") {
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
-  const stringKeys = ["name", "legalName", "taxId", "email", "phone", "website", "addressLine1", "addressLine2", "city", "postalCode", "country", "currency", "timezone", "locale", "invoicePrefix", "quotePrefix", "invoiceNotes", "invoiceTerms"];
+  const stringKeys = ["name", "legalName", "taxId", "email", "phone", "website", "addressLine1", "addressLine2", "city", "postalCode", "country", "currency", "timezone", "locale", "invoicePrefix", "quotePrefix", "invoiceNotes", "invoiceTerms", "paymentInstructions"];
   if (stringKeys.some((key) => body[key] !== undefined && body[key] !== null && typeof body[key] !== "string")) {
     return NextResponse.json({ error: "Um ou mais campos de texto têm um formato inválido." }, { status: 400 });
   }
@@ -76,6 +76,7 @@ export async function PATCH(request: NextRequest) {
   const quotePrefix = text(body.quotePrefix, 12);
   const invoiceNotes = text(body.invoiceNotes, 4000);
   const invoiceTerms = text(body.invoiceTerms, 4000);
+  const paymentInstructions = text(body.paymentInstructions, 1500);
   const terms = body.defaultPaymentTerms;
 
   if (name === null || (name !== undefined && name.length < 2)) return NextResponse.json({ error: "O nome da empresa deve ter pelo menos 2 caracteres." }, { status: 400 });
@@ -114,6 +115,7 @@ export async function PATCH(request: NextRequest) {
     ...(quotePrefix !== undefined && quotePrefix && { quotePrefix }),
     ...(invoiceNotes !== undefined && { invoiceNotes }),
     ...(invoiceTerms !== undefined && { invoiceTerms }),
+    ...(paymentInstructions !== undefined && { paymentInstructions }),
   };
 
   const organizationId = current.membership.organizationId;

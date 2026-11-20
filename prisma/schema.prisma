@@ -260,6 +260,8 @@ model Organization {
   fiscalDocuments    FiscalDocument[]
   fiscalDeliveries   FiscalDelivery[]
   fiscalEvents       FiscalEvent[]
+  paymentInstructions String?
+  paymentNotices     PaymentNotice[]
 }
 
 model Membership {
@@ -452,6 +454,7 @@ model Invoice {
   @@index([organizationId, status, issueDate])
   @@index([organizationId, clientId])
   @@index([organizationId, dueDate])
+  paymentNotices    PaymentNotice[]
 }
 
 model InvoiceLine {
@@ -1055,4 +1058,25 @@ model FiscalEvent {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, at])
+}
+
+/// Aviso de pagamento feito pelo cliente no portal; a empresa confirma (cria o Payment) ou rejeita.
+model PaymentNotice {
+  id             String       @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  payerName      String
+  amount         Decimal      @db.Decimal(18, 2)
+  paidOn         String?
+  reference      String?
+  note           String?
+  status         String       @default("PENDING")
+  resolvedAt     DateTime?
+  resolvedById   String?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, status])
+  @@index([invoiceId])
 }

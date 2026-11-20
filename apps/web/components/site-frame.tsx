@@ -38,7 +38,7 @@ const groups: { title: string; hrefs: string[] }[] = [
   { title: "Conta", hrefs: ["/team", "/billing", "/settings", "/admin"] },
 ];
 
-const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept", "/terms", "/privacy"];
+const publicPaths = ["/", "/plans", "/login", "/register", "/onboarding", "/team/accept", "/terms", "/privacy", "/p"];
 
 export default function SiteFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

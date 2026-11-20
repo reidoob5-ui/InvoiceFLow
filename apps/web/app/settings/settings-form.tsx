@@ -9,13 +9,13 @@ type Organization = {
   phone: string | null; website: string | null; addressLine1: string | null; addressLine2: string | null;
   city: string | null; postalCode: string | null; country: string; currency: string; timezone: string;
   locale: string; defaultPaymentTerms: number; invoicePrefix: string; quotePrefix: string;
-  invoiceNotes: string | null; invoiceTerms: string | null;
+  invoiceNotes: string | null; invoiceTerms: string | null; paymentInstructions: string | null;
 };
 type FormState = Record<keyof Omit<Organization, "id">, string>;
 const blank: FormState = {
   name: "", legalName: "", taxId: "", email: "", phone: "", website: "", addressLine1: "",
   addressLine2: "", city: "", postalCode: "", country: "AO", currency: "AOA", timezone: "Africa/Luanda",
-  locale: "pt", defaultPaymentTerms: "30", invoicePrefix: "INV", quotePrefix: "QT", invoiceNotes: "", invoiceTerms: "",
+  locale: "pt", defaultPaymentTerms: "30", invoicePrefix: "INV", quotePrefix: "QT", invoiceNotes: "", invoiceTerms: "", paymentInstructions: "",
 };
 
 function toForm(org: Organization): FormState {
@@ -103,6 +103,7 @@ export default function CompanySettingsForm() {
         </div>
         <div className="mt-5 grid gap-5">
           <label className={labelClass}>Notas padrão nas facturas<textarea maxLength={4000} rows={3} value={form.invoiceNotes} onChange={e=>update("invoiceNotes",e.target.value)} className={inputClass} placeholder="Notas que podem aparecer nos documentos."/></label>
+          <label className={labelClass}>Instruções de pagamento (mostradas ao cliente no portal)<textarea maxLength={1500} rows={4} value={form.paymentInstructions} onChange={e=>update("paymentInstructions",e.target.value)} className={inputClass} placeholder={"Banco: BAI\nIBAN: AO06 0000 0000 0000 0000 0000 0\nMulticaixa Express: 9XX XXX XXX\nUse o número da factura como referência."}/></label>
           <label className={labelClass}>Termos e condições padrão<textarea maxLength={4000} rows={4} value={form.invoiceTerms} onChange={e=>update("invoiceTerms",e.target.value)} className={inputClass} placeholder="Condições de pagamento, entrega e outras cláusulas."/></label>
         </div>
       </section>

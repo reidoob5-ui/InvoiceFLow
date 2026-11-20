@@ -2,6 +2,8 @@ import IssueInvoiceButton from "./issue-button";
 import DocumentActions from "./document-actions";
 import { parseSnapshot } from "@/lib/snapshot";
 import InvoicePaymentForm from "./payment-form";
+import PaymentNotices from "./payment-notices";
+import { isStrongPublicToken } from "@/lib/document-workflow";
 import { balanceDue } from "@/lib/invoice-calc";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -13,7 +15,7 @@ export default async function InvoiceDetailPage({params}:{params:Promise<{id:str
   const current=await getCurrentSession();if(!current)redirect("/login");if(!current.membership)redirect("/onboarding");
   if(!can(current.membership.role,"invoices:read"))redirect("/");
   const {id}=await params;
-  const invoice=await prisma.invoice.findFirst({where:{id,organizationId:current.membership.organizationId},include:{client:true,organization:true,lines:{orderBy:{position:"asc"}},payments:{where:{status:"CONFIRMED"},orderBy:{receivedAt:"desc"}},creditNotes:{select:{id:true,number:true,total:true}}}});
+  const invoice=await prisma.invoice.findFirst({where:{id,organizationId:current.membership.organizationId},include:{client:true,organization:true,lines:{orderBy:{position:"asc"}},payments:{where:{status:"CONFIRMED"},orderBy:{receivedAt:"desc"}},creditNotes:{select:{id:true,number:true,total:true}},paymentNotices:{where:{status:"PENDING"},orderBy:{createdAt:"asc"}}}});
   if(!invoice)notFound();
   // Issued documents are shown from their frozen snapshot, never from live client/organization data.
   const snap=invoice.status!=="DRAFT"?parseSnapshot(invoice.snapshot):null;
@@ -41,6 +43,7 @@ export default async function InvoiceDetailPage({params}:{params:Promise<{id:str
     </section>
     <div className="mt-5 grid gap-5 lg:grid-cols-2">
       <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-5 sm:p-6"><h2 className="font-semibold">Recebimentos</h2><div className="mt-4 space-y-3">{invoice.payments.length===0?<p className="text-sm text-slate-500">Ainda não foram registados pagamentos.</p>:invoice.payments.map(payment=><div key={payment.id} className="flex items-center justify-between border-b border-white/[.06] pb-3 text-sm"><div><p className="font-medium">{money(payment.amount)}</p><p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("pt-PT").format(payment.receivedAt)} · {payment.method.replace("_"," ")}</p>{payment.reference&&<p className="text-xs text-slate-500">Ref.: {payment.reference}</p>}</div><span className="text-emerald-300">Confirmado</span></div>)}</div><div className="mt-4 border-t border-white/10 pt-4 text-sm"><div className="flex justify-between text-slate-400"><span>Total recebido</span><span>{money(invoice.amountPaid)}</span></div><div className="mt-2 flex justify-between font-semibold"><span>Saldo em aberto</span><span>{money(remaining.toFixed(2))}</span></div></div></section>
+      {invoice.type==="INVOICE"&&invoice.status!=="DRAFT"&&invoice.status!=="VOID"&&<PaymentNotices canAct={canReceive} portalPath={isStrongPublicToken(invoice.publicToken)?`/p/${invoice.publicToken}`:null} notices={invoice.paymentNotices.map(n=>({id:n.id,payerName:n.payerName,amount:n.amount.toString(),paidOn:n.paidOn,reference:n.reference,note:n.note}))} />}
       {canReceive?<InvoicePaymentForm id={id} currency={invoice.currency} balance={remaining.toNumber()} />:<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5 text-sm text-slate-500">{invoice.status==="DRAFT"?"Emite a factura antes de registar recebimentos.":remaining.isZero()?"Esta factura está totalmente liquidada.":"Não tens permissão para registar recebimentos."}</div>}
     </div>
     <p className="mt-4 text-xs text-slate-600">Criada em {new Intl.DateTimeFormat("pt-PT",{dateStyle:"medium",timeStyle:"short"}).format(invoice.createdAt)}</p>

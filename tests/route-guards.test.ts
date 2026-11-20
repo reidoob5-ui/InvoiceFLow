@@ -29,6 +29,7 @@ const NO_SESSION: Record<string, string> = {
   "cron/daily": "constant-time Bearer CRON_SECRET, fails closed",
   "public/exchange-rates": "public, read-only, no tenant data",
   "public/invoices/[token]/pdf": "unguessable >=192-bit token",
+  "public/invoices/[token]/notice": "unguessable >=192-bit token; only creates a PENDING notice (no balance change), capped per invoice",
   "webhooks/paddle": "HMAC signature verification + idempotency",
   "webhooks/proxypay": "provider-side re-verification + idempotency",
 };
