@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
-  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot, ShieldCheck
+  ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot, ShieldCheck, Landmark
 } from "lucide-react";
 
 const navigation = [
@@ -22,6 +22,7 @@ const navigation = [
   { href: "/taxes", label: "Impostos e taxas", icon: Percent, description: "Configura taxas e acompanha os valores aplicáveis.", accent: "from-rose-300 to-pink-500" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, description: "Analisa o fluxo de caixa, despesas e saldos financeiros.", accent: "from-sky-300 to-cyan-500" },
   { href: "/admin", label: "Administração", icon: ShieldCheck, description: "Receita, subscrições e utilizadores da plataforma.", accent: "from-rose-300 to-orange-400" },
+  { href: "/fiscal", label: "Facturação AGT", icon: Landmark, description: "Facturação electrónica: perfil fiscal, séries, assinatura e envio à AGT.", accent: "from-emerald-300 to-cyan-500" },
   { href: "/ai", label: "InvoiceFlow AI", icon: Bot, description: "Pergunta ao assistente sobre recebimentos, atrasos e mensagens de cobrança.", accent: "from-indigo-300 to-cyan-400" },
   { href: "/insights", label: "Inteligência financeira", icon: Lightbulb, description: "Identifica riscos, vencimentos e acções prioritárias a partir dos teus registos.", accent: "from-amber-200 to-orange-400" },
   { href: "/team", label: "Equipa e acessos", icon: Users, description: "Gere membros, perfis de acesso e convites para a tua empresa.", accent: "from-cyan-300 to-blue-500" },
@@ -31,7 +32,7 @@ const navigation = [
 
 const groups: { title: string; hrefs: string[] }[] = [
   { title: "Principal", hrefs: ["/dashboard", "/ai", "/insights"] },
-  { title: "Vendas", hrefs: ["/invoices", "/quotes", "/collections", "/clients", "/products"] },
+  { title: "Vendas", hrefs: ["/invoices", "/fiscal", "/quotes", "/collections", "/clients", "/products"] },
   { title: "Compras", hrefs: ["/expenses", "/bills", "/suppliers"] },
   { title: "Análise", hrefs: ["/reports", "/business-planner", "/taxes"] },
   { title: "Conta", hrefs: ["/team", "/billing", "/settings", "/admin"] },
