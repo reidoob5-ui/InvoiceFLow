@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { runFiscalSync } from "@/lib/agt/service";
 import { cleanupExpired, markOverdueInvoices, runRecurringInvoices, sendOverdueReminders } from "@/lib/cron";
 
 export const runtime = "nodejs";
@@ -26,7 +27,8 @@ async function handle(request: Request) {
   const overdue = await markOverdueInvoices(now);
   const reminders = await sendOverdueReminders(now);
   const cleanup = await cleanupExpired(now);
-  return NextResponse.json({ ok: true, ranAt: now.toISOString(), recurring, overdue, reminders, cleanup });
+  const fiscal = await runFiscalSync(now).catch((e) => ({ error: String(e?.message ?? e).slice(0, 200) }));
+  return NextResponse.json({ ok: true, ranAt: now.toISOString(), recurring, overdue, reminders, cleanup, fiscal });
 }
 
 // Vercel Cron issues GET; POST is allowed for manual triggers and other schedulers.

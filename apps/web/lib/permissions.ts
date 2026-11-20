@@ -5,7 +5,7 @@ export type Role = "OWNER" | "ADMIN" | "ACCOUNTANT" | "SALES" | "MEMBER" | "VIEW
 
 export const RESOURCES = [
   "dashboard", "invoices", "quotes", "clients", "products", "payments", "expenses", "suppliers",
-  "reports", "taxes", "settings", "team", "billing", "audit", "ai", "integrations",
+  "reports", "taxes", "settings", "team", "billing", "audit", "ai", "integrations", "fiscal",
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 export type Action = "read" | "write" | "delete" | "send";
@@ -31,6 +31,7 @@ const GRANTS: Record<Role, Set<Permission>> = {
     ...all("reports", ["read"]),
     ...all("taxes"),
     ...all("audit", ["read"]),
+    ...all("fiscal", ["read"]),
     ...all("ai", ["read", "write"]),
   ]),
   SALES: new Set<Permission>([

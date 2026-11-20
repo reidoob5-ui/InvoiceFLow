@@ -255,6 +255,11 @@ model Organization {
   tickets            SupportTicket[]
   platformInvoices   PlatformInvoice[]
   subscription       Subscription?
+  fiscalProfile      FiscalProfile?
+  fiscalSeries       FiscalSeries[]
+  fiscalDocuments    FiscalDocument[]
+  fiscalDeliveries   FiscalDelivery[]
+  fiscalEvents       FiscalEvent[]
 }
 
 model Membership {
@@ -939,4 +944,115 @@ model UsageCounter {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@id([organizationId, key, period])
+}
+
+// ---------------------------------------------------------------------------
+// Facturação electrónica AGT (Decreto Executivo 683/25)
+// ---------------------------------------------------------------------------
+
+enum FiscalEnvironment {
+  HOMOLOGATION
+  PRODUCTION
+}
+
+enum FiscalDeliveryState {
+  PENDING
+  RETRY
+  SUBMITTED
+  VALID
+  PENALIZED
+  INVALID
+  BLOCKED
+}
+
+/// Dados fiscais do contribuinte (1 por organização). A chave privada RSA fica cifrada (AES-256-GCM).
+model FiscalProfile {
+  id                  String            @id @default(cuid())
+  organizationId      String            @unique
+  nif                 String
+  companyName         String
+  eacCode             String?
+  environment         FiscalEnvironment @default(HOMOLOGATION)
+  enabled             Boolean           @default(false)
+  privateKeyEncrypted String?
+  publicKeyPem        String?
+  keyFingerprint      String?
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+/// Série de numeração (o código é gerado pela AGT via solicitarSerie).
+model FiscalSeries {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String
+  year           Int
+  documentType   String
+  firstNumber    Int          @default(1)
+  nextNumber     Int          @default(1)
+  lastNumber     Int?
+  lastDate       String?
+  status         String       @default("A")
+  establishment  String       @default("SEDE")
+  contingency    Boolean      @default(false)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents      FiscalDocument[]
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, code, year, documentType])
+  @@index([organizationId, documentType, year])
+}
+
+/// Documento fiscal emitido e assinado: IMUTÁVEL (triggers na base de dados).
+model FiscalDocument {
+  id              String         @id @default(cuid())
+  organizationId  String
+  seriesId        String
+  invoiceId       String?        @unique
+  documentNo      String
+  documentType    String
+  seq             Int
+  documentDate    String
+  systemEntryDate String
+  payload         Json
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  series          FiscalSeries   @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+  delivery        FiscalDelivery?
+  createdAt       DateTime       @default(now())
+
+  @@unique([organizationId, documentNo])
+  @@unique([seriesId, seq])
+  @@index([organizationId, createdAt])
+}
+
+/// Estado de envio à AGT (mutável; cada mudança deixa evidência em FiscalEvent).
+model FiscalDelivery {
+  id             String              @id @default(cuid())
+  organizationId String
+  documentId     String              @unique
+  state          FiscalDeliveryState @default(PENDING)
+  requestId      String?
+  attempts       Int                 @default(0)
+  nextAttemptAt  DateTime?
+  deadlineAt     DateTime
+  errors         Json?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  document       FiscalDocument      @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  updatedAt      DateTime            @updatedAt
+
+  @@index([organizationId, state, nextAttemptAt])
+}
+
+/// Registo de auditoria fiscal, só de acrescentar (triggers).
+model FiscalEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  documentNo     String?
+  kind           String
+  detail         Json?
+  at             DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, at])
 }
