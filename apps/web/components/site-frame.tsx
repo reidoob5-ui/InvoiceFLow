@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import AssistantWidget from "@/components/assistant-widget";
 import {
   Menu, X, LayoutDashboard, FileText, FileCheck, BarChart3, Users, Package, Truck,
   ReceiptText, LogOut, ChevronLeft, Sparkles, CreditCard, CircleHelp, WalletCards, MessageCircle, Lightbulb, Calculator, Settings, Percent, Bot, ShieldCheck, Landmark
@@ -154,6 +155,7 @@ export default function SiteFrame({ children }: { children: React.ReactNode }) {
         {identity?.role === "VIEWER" && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-xs text-amber-100 sm:px-7"><span><strong>Modo demonstração</strong> · dados fictícios, só leitura. Explora à vontade.</span><Link href="/plans" className="rounded-lg bg-white px-3 py-1.5 font-bold text-slate-950 hover:bg-indigo-100">Criar a minha conta grátis</Link></div>}
         <div className="animate-[page-enter_.42s_ease-out_both] px-4 pb-12 pt-5 sm:px-7 lg:px-9">{children}</div>
       </div>
+      <AssistantWidget />
     </div>
   );
 }

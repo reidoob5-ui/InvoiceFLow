@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
-  const body = await request.json().catch(() => null) as { message?: unknown; conversationId?: unknown } | null;
+  const body = await request.json().catch(() => null) as { message?: unknown; conversationId?: unknown; page?: unknown } | null;
   const message = typeof body?.message === "string" ? body.message.trim() : "";
   if (!message) return NextResponse.json({ error: "Escreve uma pergunta." }, { status: 400 });
   if (message.length > 2000) return NextResponse.json({ error: "Mensagem demasiado longa (máx. 2000 caracteres)." }, { status: 400 });
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   let reply: string;
   try {
     const context = await buildFinancialContext(organizationId, organization.name, organization.currency || "AOA");
-    reply = await askAnthropic(buildSystemPrompt(context), [...history, { role: "user", content: message }]);
+    reply = await askAnthropic(buildSystemPrompt(context, typeof body?.page === "string" && /^\/[a-z0-9/_-]{0,60}$/i.test(body.page) ? body.page : undefined), [...history, { role: "user", content: message }]);
   } catch (error) {
     if (error instanceof AiUnavailableError) {
       return NextResponse.json({ error: "O assistente de IA não está disponível neste momento. Tenta novamente mais tarde." }, { status: 503 });
