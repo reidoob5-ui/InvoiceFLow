@@ -3,6 +3,7 @@ import DocumentActions from "./document-actions";
 import { parseSnapshot } from "@/lib/snapshot";
 import InvoicePaymentForm from "./payment-form";
 import PaymentNotices from "./payment-notices";
+import FiscalCard from "./fiscal-card";
 import { isStrongPublicToken } from "@/lib/document-workflow";
 import { balanceDue } from "@/lib/invoice-calc";
 import Link from "next/link";
@@ -17,6 +18,8 @@ export default async function InvoiceDetailPage({params}:{params:Promise<{id:str
   const {id}=await params;
   const invoice=await prisma.invoice.findFirst({where:{id,organizationId:current.membership.organizationId},include:{client:true,organization:true,lines:{orderBy:{position:"asc"}},payments:{where:{status:"CONFIRMED"},orderBy:{receivedAt:"desc"}},creditNotes:{select:{id:true,number:true,total:true}},paymentNotices:{where:{status:"PENDING"},orderBy:{createdAt:"asc"}}}});
   if(!invoice)notFound();
+  const fiscalProfile=can(current.membership.role,"fiscal:read")?await prisma.fiscalProfile.findUnique({where:{organizationId:current.membership.organizationId},select:{enabled:true,environment:true}}):null;
+  const fiscalDoc=fiscalProfile?.enabled?await prisma.fiscalDocument.findFirst({where:{invoiceId:id,organizationId:current.membership.organizationId},select:{documentNo:true,delivery:{select:{state:true,deadlineAt:true,errors:true}}}}):null;
   // Issued documents are shown from their frozen snapshot, never from live client/organization data.
   const snap=invoice.status!=="DRAFT"?parseSnapshot(invoice.snapshot):null;
   const seller=snap?snap.seller:{name:invoice.organization.legalName||invoice.organization.name,taxId:invoice.organization.taxId,lines:[] as string[]};
@@ -46,6 +49,7 @@ export default async function InvoiceDetailPage({params}:{params:Promise<{id:str
       {invoice.type==="INVOICE"&&invoice.status!=="DRAFT"&&invoice.status!=="VOID"&&<PaymentNotices canAct={canReceive} portalPath={isStrongPublicToken(invoice.publicToken)?`/p/${invoice.publicToken}`:null} notices={invoice.paymentNotices.map(n=>({id:n.id,payerName:n.payerName,amount:n.amount.toString(),paidOn:n.paidOn,reference:n.reference,note:n.note}))} />}
       {canReceive?<InvoicePaymentForm id={id} currency={invoice.currency} balance={remaining.toNumber()} />:<div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5 text-sm text-slate-500">{invoice.status==="DRAFT"?"Emite a factura antes de registar recebimentos.":remaining.isZero()?"Esta factura está totalmente liquidada.":"Não tens permissão para registar recebimentos."}</div>}
     </div>
+    {fiscalProfile?.enabled&&invoice.status!=="DRAFT"&&invoice.status!=="VOID"&&<div className="mt-5"><FiscalCard id={id} environment={fiscalProfile.environment} canCertify={can(role,"fiscal:write")} fiscal={fiscalDoc?{documentNo:fiscalDoc.documentNo,state:fiscalDoc.delivery?.state??"PENDING",deadlineAt:(fiscalDoc.delivery?.deadlineAt??new Date()).toISOString(),errors:fiscalDoc.delivery?.errors?JSON.stringify(fiscalDoc.delivery.errors).slice(0,300):null}:null} /></div>}
     <p className="mt-4 text-xs text-slate-600">Criada em {new Intl.DateTimeFormat("pt-PT",{dateStyle:"medium",timeStyle:"short"}).format(invoice.createdAt)}</p>
   </div></main>;
 }

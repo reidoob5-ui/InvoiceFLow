@@ -30,6 +30,7 @@ const NO_SESSION: Record<string, string> = {
   "public/exchange-rates": "public, read-only, no tenant data",
   "public/invoices/[token]/pdf": "unguessable >=192-bit token",
   "public/invoices/[token]/notice": "unguessable >=192-bit token; only creates a PENDING notice (no balance change), capped per invoice",
+  "agt-sim/[service]": "homologation simulator: 404 unless AGT_SIMULATOR=1, stateless, no tenant data",
   "webhooks/paddle": "HMAC signature verification + idempotency",
   "webhooks/proxypay": "provider-side re-verification + idempotency",
 };

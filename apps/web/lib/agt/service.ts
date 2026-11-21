@@ -91,12 +91,16 @@ export async function agtClientFor(organizationId: string, fetchImpl?: typeof fe
     if (!v) throw new FiscalError(`Variável de ambiente ${n} em falta.`, "NO_PRODUCER_CONFIG");
     return v;
   };
+  // Simulador interno (só homologação e só com AGT_SIMULATOR=1): permite testar o fluxo sem credenciais.
+  const sim = env.AGT_SIMULATOR === "1" && issuer.environment === "HOMOLOGATION" && !!env.APP_URL;
+  const simPaths = sim ? Object.fromEntries(["registarFactura", "obterEstado", "listarFacturas", "consultarFactura", "solicitarSerie", "listarSeries", "validarDocumento"].map((n) => [n, `/${n}`])) : undefined;
   return new AgtClient({
-    baseUrl: env.AGT_BASE_URL || AGT_BASE_URLS[issuer.environment],
+    paths: simPaths,
+    baseUrl: sim ? `${env.APP_URL!.replace(/\/$/, "")}/api/agt-sim` : env.AGT_BASE_URL || AGT_BASE_URLS[issuer.environment],
     taxpayerNif: issuer.nif,
     taxpayerPrivateKey: issuer.key,
     producerPrivateKey: need("AGT_PRODUCER_PRIVATE_KEY").replace(/\\n/g, "\n"),
-    software: { productId: need("AGT_PRODUCT_ID"), productVersion: need("AGT_PRODUCT_VERSION"), validationNumber: need("AGT_SOFTWARE_VALIDATION_NUMBER") },
+    software: { productId: need("AGT_PRODUCT_ID"), productVersion: need("AGT_PRODUCT_VERSION"), validationNumber: sim ? env.AGT_SOFTWARE_VALIDATION_NUMBER || "SIMULADOR" : need("AGT_SOFTWARE_VALIDATION_NUMBER") },
     credentials: env.AGT_BASIC_USER && env.AGT_BASIC_PASSWORD ? { username: env.AGT_BASIC_USER, password: env.AGT_BASIC_PASSWORD } : undefined,
     fetchImpl,
   });

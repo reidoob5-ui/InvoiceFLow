@@ -32,3 +32,7 @@ Implements the electronic invoicing flow of Decreto Executivo n.º 683/25. **Sta
 
 ## Before going to production
 Rotate `FISCAL_KEY_ENCRYPTION_KEY` before storing real taxpayer keys (the current value was generated during development), run `tests/agt-flow.integration.test.ts` against a test database (`INTEGRATION_DB=1`), and complete AGT's homologation tests.
+
+## Simulador de homologação (`AGT_SIMULATOR=1`)
+
+Para testar o fluxo completo sem credenciais da AGT: com `AGT_SIMULATOR=1`, `APP_URL` definido e o perfil fiscal em **Homologação**, o cliente AGT fala com `/api/agt-sim/*` (esta própria aplicação). Valida a estrutura do Anexo I, devolve séries `SIM…` e marca os documentos como validados. **Não verifica assinaturas nem NIF e não tem qualquer valor fiscal.** Remover a variável assim que chegarem as credenciais reais.
