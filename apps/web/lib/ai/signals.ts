@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { D, formatMoney } from "@/lib/money";
 import { can, type Role } from "@/lib/permissions";
+import { classifySubscription } from "@/lib/billing/pure";
+import { DEMO_SLUG } from "@/lib/demo";
 
 const DAY = 24 * 60 * 60 * 1000;
 const OPEN_INVOICES = ["ISSUED", "PARTIALLY_PAID", "OVERDUE"] as const;
@@ -119,6 +121,46 @@ export async function computeSignals(organizationId: string, role: Role, baseCur
     if (uncertified > 0) out.push({ id: `uncert:${key}:${uncertified}`, severity: "warning", title: `${uncertified} ${uncertified === 1 ? "factura sem certificação" : "facturas sem certificação"} AGT`, detail: "Facturas emitidas nos últimos 30 dias que ainda não foram certificadas.", href: "/invoices" });
   }
 
+  if (can(role, "billing:read")) out.push(...(await subscriptionSignals(organizationId, now, key)));
+
   const rank = { critical: 0, warning: 1, info: 2, good: 3 } as const;
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]).slice(0, 12);
+}
+
+/** Avisos da subscrição da própria empresa (expira, expirou, pagamento em análise). */
+async function subscriptionSignals(organizationId: string, now: Date, key: string): Promise<Signal[]> {
+  const [sub, pending] = await Promise.all([
+    prisma.subscription.findUnique({ where: { organizationId }, select: { status: true, trialEndsAt: true, currentPeriodEnd: true, graceEndsAt: true, plan: { select: { name: true, monthlyPrice: true } } } }),
+    prisma.platformInvoice.findFirst({ where: { organizationId, provider: "manual", status: "OPEN" }, select: { claimedAt: true, reference: true } }),
+  ]);
+  if (!sub) return [];
+  const state = classifySubscription(sub, Number(sub.plan.monthlyPrice), now);
+  const out: Signal[] = [];
+  const daysTo = (d?: Date | null) => (d ? Math.max(0, Math.ceil((d.getTime() - now.getTime()) / DAY)) : 0);
+  if (pending?.claimedAt) {
+    out.push({ id: `subpending:${pending.reference}`, severity: "info", title: "Pagamento em análise", detail: `Recebemos o teu aviso de pagamento (ref. ${pending.reference}). O plano é activado assim que o administrador o confirmar.`, href: "/billing" });
+    return out;
+  }
+  if (state === "UNPAID") out.push({ id: `subexpired:${key}`, severity: "critical", title: "A tua subscrição expirou", detail: "Enquanto não renovares, não consegues criar nem alterar dados. Gera uma referência de pagamento para reactivar.", href: "/billing" });
+  else if (state === "EXPIRING") { const n = daysTo(sub.currentPeriodEnd); out.push({ id: `subexpiring:${key}`, severity: n <= 3 ? "critical" : "warning", title: `O teu plano ${sub.plan.name} expira ${n <= 0 ? "hoje" : `em ${n} ${n === 1 ? "dia" : "dias"}`}`, detail: "Renova a tempo para não perderes o acesso. Pagas e envias o comprovativo por WhatsApp.", href: "/billing" }); }
+  else if (state === "TRIAL" && sub.trialEndsAt && sub.trialEndsAt.getTime() - now.getTime() <= 5 * DAY) { const n = daysTo(sub.trialEndsAt); out.push({ id: `subtrial:${key}`, severity: "warning", title: `O período experimental termina ${n <= 0 ? "hoje" : `em ${n} ${n === 1 ? "dia" : "dias"}`}`, detail: "Escolhe um plano para continuares a usar tudo sem interrupções.", href: "/billing" }); }
+  return out;
+}
+
+/** Avisos só para o administrador da plataforma (com o cofre aberto): pagamentos por confirmar e planos a expirar. */
+export async function adminSignals(now = new Date()): Promise<Signal[]> {
+  const realOrg = { slug: { not: DEMO_SLUG } };
+  const key = now.toISOString().slice(0, 10);
+  const [claimed, openOnly, expiring, expired] = await Promise.all([
+    prisma.platformInvoice.count({ where: { provider: "manual", status: "OPEN", claimedAt: { not: null }, organization: realOrg } }),
+    prisma.platformInvoice.count({ where: { provider: "manual", status: "OPEN", claimedAt: null, organization: realOrg } }),
+    prisma.subscription.count({ where: { status: "ACTIVE", currentPeriodEnd: { gte: now, lte: new Date(now.getTime() + 7 * DAY) }, plan: { monthlyPrice: { gt: 0 } }, organization: realOrg } }),
+    prisma.subscription.count({ where: { status: { in: ["ACTIVE", "EXPIRED"] }, currentPeriodEnd: { lt: now }, plan: { monthlyPrice: { gt: 0 } }, organization: realOrg } }),
+  ]);
+  const out: Signal[] = [];
+  if (claimed > 0) out.push({ id: `adminclaimed:${claimed}`, severity: "critical", title: `${claimed} ${claimed === 1 ? "pagamento à espera" : "pagamentos à espera"} da tua confirmação`, detail: "Clientes que dizem que já pagaram. Confere o comprovativo no WhatsApp e confirma.", href: "/admin?tab=pagamentos" });
+  if (openOnly > 0) out.push({ id: `adminopen:${key}:${openOnly}`, severity: "info", title: `${openOnly} ${openOnly === 1 ? "pedido de pagamento" : "pedidos de pagamento"} ainda sem comprovativo`, detail: "Geraram a referência mas ainda não avisaram que pagaram.", href: "/admin?tab=pagamentos" });
+  if (expiring > 0) out.push({ id: `adminexpiring:${key}:${expiring}`, severity: "warning", title: `${expiring} ${expiring === 1 ? "subscrição expira" : "subscrições expiram"} nos próximos 7 dias`, detail: "Boa altura para lembrares estes clientes de renovar.", href: "/admin?tab=subscricoes" });
+  if (expired > 0) out.push({ id: `adminexpired:${key}:${expired}`, severity: "warning", title: `${expired} ${expired === 1 ? "empresa não pagou" : "empresas não pagaram"} (expiradas)`, detail: "Já perderam o acesso de escrita até renovarem.", href: "/admin?tab=subscricoes" });
+  return out;
 }

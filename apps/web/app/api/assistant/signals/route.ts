@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { assertCan, can, ForbiddenError } from "@/lib/permissions";
-import { computeSignals } from "@/lib/ai/signals";
+import { adminSignals, computeSignals } from "@/lib/ai/signals";
+import { unlockState } from "@/lib/admin/vault-pure";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;
@@ -17,5 +18,7 @@ export async function GET() {
   }
   const { organizationId, organization, role } = current.membership;
   const signals = await computeSignals(organizationId, role, organization.currency || "AOA");
+  // Avisos de administração só aparecem a administradores com o cofre aberto.
+  if (current.user.isPlatformAdmin && unlockState(current.session) === "unlocked") signals.unshift(...(await adminSignals()));
   return NextResponse.json({ signals, canChat: can(role, "ai:write") }, { headers: { "cache-control": "no-store" } });
 }
