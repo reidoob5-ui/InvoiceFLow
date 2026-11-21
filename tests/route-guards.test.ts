@@ -78,6 +78,18 @@ describe("API route guards", () => {
     expect(admin.filter((r) => !r.source.includes("requirePlatformAdmin") || r.source.includes("getCurrentSession")).map((r) => r.path)).toEqual([]);
   });
 
+  it("only the vault routes may run without the admin vault being open", () => {
+    const open = routes.filter((r) => r.path.startsWith("admin/") && /unlocked:\s*false/.test(r.source)).map((r) => r.path).sort();
+    expect(open).toEqual(["admin/vault/lock", "admin/vault/setup", "admin/vault/unlock"]);
+  });
+
+  it("admin pages are gated by the vault", () => {
+    const dir = join(process.cwd(), "apps/web/app/admin");
+    const page = readFileSync(join(dir, "page.tsx"), "utf8");
+    expect(page).toContain('gateAdminPage("unlocked")');
+    expect(readFileSync(join(dir, "unlock/page.tsx"), "utf8")).toContain('gateAdminPage("any")');
+  });
+
   it("manual payment confirmation is reachable only from admin routes", () => {
     const callers = routes.filter((r) => /confirmManualPayment\(/.test(r.source)).map((r) => r.path);
     expect(callers).toEqual(["admin/billing/payments/[id]"]);

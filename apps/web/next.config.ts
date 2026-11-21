@@ -44,6 +44,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: baseSecurityHeaders },
+      // Administração: nunca guardar em cache nem indexar.
+      { source: "/admin/:path*", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/api/admin/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
       { source: "/((?!api/).*)", headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy }] },
     ];
   },

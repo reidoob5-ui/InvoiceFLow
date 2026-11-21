@@ -175,6 +175,9 @@ model Session {
   ip                   String?
   expiresAt            DateTime
   lastSeenAt           DateTime @default(now())
+  /// Cofre do admin: quando esta sessão desbloqueou a administração e a última actividade lá dentro.
+  adminUnlockedAt      DateTime?
+  adminLastSeenAt      DateTime?
   createdAt            DateTime @default(now())
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

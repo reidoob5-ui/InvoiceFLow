@@ -16,3 +16,14 @@ Fluxo pensado para Angola: o cliente paga fora da app, envia o comprovativo por 
 - Não há lembrete automático antes de expirar (só o estado "A expirar" no painel).
 - O comprovativo não é guardado na app: é conferido no WhatsApp, como pediste.
 - Pagamentos ProxyPay/Paddle continuam a seguir os seus próprios webhooks.
+
+## Cofre da administração (acesso reservado)
+`/admin` e `/api/admin/*` têm quatro camadas, todas verificadas no servidor:
+1. Sessão normal (email + senha da conta, e 2FA se activo) **e** `isPlatformAdmin`. Quem não é administrador recebe **404** (a área "não existe").
+2. **Senha própria do admin**, diferente da senha da conta (mín. 14 caracteres), guardada com scrypt. Fica em `PlatformSetting` ou, se definires `ADMIN_ACCESS_HASH` na Vercel, só se muda lá.
+3. **2FA obrigatório** (`ADMIN_REQUIRE_2FA=0` desliga; não recomendado). O primeiro acesso guia: ligar 2FA → criar a senha do admin.
+4. **Bloqueio automático**: o cofre fecha após 15 min sem actividade e nunca fica aberto mais de 2 h; botão "Bloquear agora". 5 falhas em 15 min bloqueiam 15 min; 10 falhas em 24 h bloqueiam 1 h. Cada tentativa (boa ou má) fica no registo de auditoria.
+
+Opcional: `ADMIN_ALLOWED_IPS=1.2.3.4,5.6.7.8` restringe a administração a esses IPs (cuidado com IPs dinâmicos/dados móveis). Com SMTP configurado, cada abertura do cofre envia um aviso por email.
+
+Limites honestos: nenhum sistema é "impenetrável". Quem controlar a base de dados ou as variáveis da Vercel controla tudo; protege também a conta Vercel, GitHub, Neon e o email com 2FA.

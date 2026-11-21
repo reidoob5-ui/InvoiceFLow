@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentSession } from "@/lib/auth/session";
+import { gateAdminPage } from "@/lib/admin/vault";
+import LockButton from "./lock-button";
 import { D, formatMoney } from "@/lib/money";
 import { DEMO_EMAIL, DEMO_SLUG } from "@/lib/demo";
 import { classifySubscription, getPaySettings, whatsappLink } from "@/lib/billing/manual";
@@ -10,9 +10,7 @@ import { HistoryTable, PaymentQueue, SettingsForm, SubscriptionsTable, type Hist
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const current = await getCurrentSession();
-  if (!current) redirect("/login");
-  if (!current.user.isPlatformAdmin) redirect("/dashboard");
+  await gateAdminPage("unlocked");
 
   const tabParam = (await searchParams).tab;
   const tab = ["pagamentos", "subscricoes", "historico", "definicoes"].includes(tabParam ?? "") ? tabParam! : "resumo";
@@ -94,7 +92,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ];
 
   return <div className="mx-auto max-w-6xl space-y-6">
-    <div><h1 className="text-xl font-semibold">Administração da plataforma</h1><p className="mt-1 text-xs text-slate-500">Visível apenas para administradores. A empresa de demonstração não entra nestes números.</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-xl font-semibold">Administração da plataforma</h1><p className="mt-1 text-xs text-slate-500">Visível apenas para administradores. A empresa de demonstração não entra nestes números.</p></div><LockButton /></div>
     <nav aria-label="Secções da administração" className="flex flex-wrap gap-1 border-b border-white/10 pb-2 text-sm">{([["resumo", "Resumo"], ["pagamentos", "Pagamentos"], ["subscricoes", "Subscrições"], ["historico", "Histórico"], ["definicoes", "Dados de pagamento"]] as const).map(([id, label]) =>
       <Link key={id} href={id === "resumo" ? "/admin" : `/admin?tab=${id}`} aria-current={tab === id ? "page" : undefined} className={`rounded-lg px-3.5 py-2 font-medium ${tab === id ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5"}`}>{label}{id === "pagamentos" && pending.length > 0 && <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-slate-950">{pending.length}</span>}</Link>)}</nav>
     {tab === "pagamentos" && <PaymentQueue rows={pending} />}
