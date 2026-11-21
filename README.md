@@ -15,6 +15,8 @@ Multi-tenant SaaS for small-business finance: invoicing, quotes, expenses, suppl
 | Team | Roles (Owner, Admin, Accountant, Sales, Member, Viewer), invitations, 2FA (TOTP), audit log |
 | SaaS billing | Plans and subscriptions, Paddle (international) and Multicaixa/ProxyPay (Angola) with a webhook lifecycle |
 | Platform admin | `/admin`: MRR, subscriptions per plan, signups, AI usage |
+| Client portal | `/p/<token>`: the customer sees the invoice, how to pay and can report a payment; the company confirms or rejects it |
+| AGT e-invoicing (Angola) | Fiscal profile, series requested from AGT, RS256-signed documents (Anexo I), QR on the PDF, 24h submission outbox with status polling. **Homologation only, not AGT-certified** (see `docs/AGT.md`) |
 | Public demo | One-click read-only demo company |
 
 The Prisma schema also contains models for recurring invoices, API keys and webhooks that are not yet exposed in the UI.

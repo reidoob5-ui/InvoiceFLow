@@ -23,6 +23,11 @@
 | `SMTP_*` | for email | Host, port, user, password, from |
 | `PADDLE_*` | for card billing | See `docs/BILLING_SETUP.md` |
 | `PROXYPAY_*` | for Multicaixa | Sandbox by default |
+| `FISCAL_KEY_ENCRYPTION_KEY` | for AGT | `openssl rand -base64 32`. Encrypts taxpayer RSA keys at rest. Rotating it makes stored keys unreadable: re-enter them |
+| `AGT_PRODUCER_PRIVATE_KEY` | for AGT | Producer RSA key (PEM, `\n` escaped). Its public key must be registered with AGT |
+| `AGT_PRODUCT_ID`, `AGT_PRODUCT_VERSION`, `AGT_SOFTWARE_VALIDATION_NUMBER` | for AGT | Validation number is issued by AGT |
+| `AGT_BASIC_USER`, `AGT_BASIC_PASSWORD` | for AGT | Producer Basic Auth, requested from AGT |
+| `AGT_BASE_URL` | no | Overrides the homologation/production URL |
 
 ## 5. First-run checklist
 1. Open the site, register an account, create a company.
@@ -37,4 +42,5 @@ Source code, Neon database export, Vercel project, domain (if included), Paddle/
 - No native mobile apps (responsive web only).
 - Recurring invoices, API keys and outgoing webhooks exist in the schema but have no UI yet.
 - Typecheck/build run in CI and on Vercel; there is no browser end-to-end suite yet.
-- Angolan fiscal certification (e.g. AGT-certified invoicing software) is **not** claimed and must be validated locally before marketing the product as compliant.
+- Angolan fiscal certification (e.g. AGT-certified invoicing software) is **not** claimed and must be validated locally before marketing the product as compliant. The AGT module runs in homologation only; see `docs/AGT.md` for the open points.
+- The client portal does not take online payments: it shows the company's payment instructions and receives a payment notice that the company confirms.
