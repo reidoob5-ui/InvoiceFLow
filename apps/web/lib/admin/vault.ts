@@ -1,13 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { audit, getClientIp, getCurrentSession } from "@/lib/auth/session";
+import { audit, createSession, getClientIp, getCurrentSession } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { decryptSecret } from "@/lib/auth/tokens";
 import { verifyTotp } from "@/lib/auth/totp";
 import { adminPasswordIssues, ipAllowed, ISSUE_TEXT, lockoutRemainingMs, unlockState } from "@/lib/admin/vault-pure";
 
 const KEY = "admin_access_hash";
-export const require2fa = () => process.env.ADMIN_REQUIRE_2FA !== "0";
+/** O 2FA do cofre é opcional: só é exigido se ADMIN_REQUIRE_2FA=1 (ou se a própria conta já tiver 2FA activo). */
+export const require2fa = () => process.env.ADMIN_REQUIRE_2FA === "1";
 
 /** A senha do admin vem de ADMIN_ACCESS_HASH (se definida: só se muda na Vercel) ou da base de dados. */
 export async function getAdminHash(): Promise<{ hash: string | null; source: "env" | "db" | null }> {
@@ -31,7 +32,7 @@ export async function lockAdminSessions(userId: string, exceptSessionId?: string
  */
 export async function gateAdminPage(mode: "unlocked" | "any") {
   const current = await getCurrentSession();
-  if (!current) redirect("/login");
+  if (!current) redirect("/admin/unlock");
   if (!current.user.isPlatformAdmin || !ipAllowed(await getClientIp(), process.env.ADMIN_ALLOWED_IPS)) notFound();
   const open = unlockState(current.session) === "unlocked";
   if (mode === "unlocked") {
@@ -51,9 +52,9 @@ async function twoFactorOk(userId: string, code: string) {
   return { enabled: true, valid: /^\d{6}$/.test(code) && verifyTotp(decryptSecret(u.twoFactorSecret), code) };
 }
 
-async function failures(userId: string, ip: string | null) {
+async function failures(userId: string | null, ip: string | null) {
   const rows = await prisma.auditLog.findMany({
-    where: { action: "admin.unlock_failed", createdAt: { gte: new Date(Date.now() - 24 * 3600_000) }, OR: [{ userId }, ...(ip ? [{ ip }] : [])] },
+    where: { action: "admin.unlock_failed", createdAt: { gte: new Date(Date.now() - 24 * 3600_000) }, OR: [...(userId ? [{ userId }] : []), ...(ip ? [{ ip }] : [])] },
     orderBy: { createdAt: "desc" }, take: 30, select: { createdAt: true },
   });
   return rows.map((r) => r.createdAt);
@@ -114,5 +115,42 @@ export async function setAdminPassword(input: { sessionId: string; userId: strin
   const now = new Date();
   await prisma.session.update({ where: { id: input.sessionId }, data: { adminUnlockedAt: now, adminLastSeenAt: now } });
   await audit({ action: existing.hash ? "admin.password_changed" : "admin.password_set", userId: input.userId });
+  return { kind: "ok" };
+}
+
+export type LoginResult = UnlockResult | { kind: "code_required" };
+
+/**
+ * Entrada directa na administração com email + senha do admin (um só passo, sem a senha da conta).
+ * Para quem não é administrador responde exactamente como para uma senha errada e gasta o mesmo tempo.
+ */
+export async function attemptAdminLogin(input: { email: string; password: string; code: string }): Promise<LoginResult> {
+  const ip = await getClientIp();
+  const email = input.email.trim().toLowerCase();
+  const user = email ? await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, status: true, isPlatformAdmin: true, twoFactorEnabled: true, twoFactorSecret: true } }) : null;
+  const wait = lockoutRemainingMs(await failures(user?.id ?? null, ip));
+  if (wait > 0) return { kind: "locked", retryAfterSec: Math.ceil(wait / 1000) };
+  const { hash } = await getAdminHash();
+  if (!hash) return { kind: "needs_setup" };
+  const passwordOk = await verifyPassword(input.password, hash);
+  const isAdmin = !!user && user.status === "ACTIVE" && user.isPlatformAdmin && ipAllowed(ip, process.env.ADMIN_ALLOWED_IPS);
+  if (!passwordOk || !isAdmin || !user) {
+    await audit({ action: "admin.unlock_failed", userId: user?.id ?? null, metadata: { reason: !passwordOk ? "password" : "not_admin", direct: true } });
+    return { kind: "invalid" };
+  }
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    if (!input.code) return { kind: "code_required" };
+    if (!/^\d{6}$/.test(input.code) || !verifyTotp(decryptSecret(user.twoFactorSecret), input.code)) {
+      await audit({ action: "admin.unlock_failed", userId: user.id, metadata: { reason: "code", direct: true } });
+      return { kind: "invalid" };
+    }
+  }
+  const membership = await prisma.membership.findFirst({ where: { userId: user.id, status: "ACTIVE", organization: { status: "ACTIVE" } }, orderBy: { createdAt: "asc" }, select: { organizationId: true } });
+  const sessionId = await createSession(user.id, membership?.organizationId);
+  const now = new Date();
+  await prisma.session.update({ where: { id: sessionId }, data: { adminUnlockedAt: now, adminLastSeenAt: now } });
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now } });
+  await audit({ action: "admin.login", userId: user.id });
+  void alertAdmin(user.email, ip);
   return { kind: "ok" };
 }

@@ -31,6 +31,7 @@ const NO_SESSION: Record<string, string> = {
   "public/invoices/[token]/pdf": "unguessable >=192-bit token",
   "public/invoices/[token]/notice": "unguessable >=192-bit token; only creates a PENDING notice (no balance change), capped per invoice",
   "agt-sim/[service]": "homologation simulator: 404 unless AGT_SIMULATOR=1, stateless, no tenant data",
+  "admin/vault/login": "admin credential check (email + admin password): rate-limited lockout, audited, answers identically for non-admins",
   "webhooks/paddle": "HMAC signature verification + idempotency",
   "webhooks/proxypay": "provider-side re-verification + idempotency",
 };
@@ -73,7 +74,7 @@ describe("API route guards", () => {
   });
 
   it("every /admin route is restricted to platform administrators", () => {
-    const admin = routes.filter((r) => r.path.startsWith("admin/"));
+    const admin = routes.filter((r) => r.path.startsWith("admin/") && r.path !== "admin/vault/login");
     expect(admin.length).toBeGreaterThan(2);
     expect(admin.filter((r) => !r.source.includes("requirePlatformAdmin") || r.source.includes("getCurrentSession")).map((r) => r.path)).toEqual([]);
   });
@@ -87,7 +88,9 @@ describe("API route guards", () => {
     const dir = join(process.cwd(), "apps/web/app/admin");
     const page = readFileSync(join(dir, "page.tsx"), "utf8");
     expect(page).toContain('gateAdminPage("unlocked")');
-    expect(readFileSync(join(dir, "unlock/page.tsx"), "utf8")).toContain('gateAdminPage("any")');
+    const unlock = readFileSync(join(dir, "unlock/page.tsx"), "utf8");
+    expect(unlock).toContain("isPlatformAdmin");
+    expect(unlock).toContain("notFound()");
   });
 
   it("manual payment confirmation is reachable only from admin routes", () => {

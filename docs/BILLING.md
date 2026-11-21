@@ -21,7 +21,7 @@ Fluxo pensado para Angola: o cliente paga fora da app, envia o comprovativo por 
 `/admin` e `/api/admin/*` têm quatro camadas, todas verificadas no servidor:
 1. Sessão normal (email + senha da conta, e 2FA se activo) **e** `isPlatformAdmin`. Quem não é administrador recebe **404** (a área "não existe").
 2. **Senha própria do admin**, diferente da senha da conta (mín. 14 caracteres), guardada com scrypt. Fica em `PlatformSetting` ou, se definires `ADMIN_ACCESS_HASH` na Vercel, só se muda lá.
-3. **2FA obrigatório** (`ADMIN_REQUIRE_2FA=0` desliga; não recomendado). O primeiro acesso guia: ligar 2FA → criar a senha do admin.
+3. **Entrada directa**: em `/admin` basta o **email + a senha do admin** (sem a senha da conta). O 2FA é opcional: só é pedido se a conta já o tiver activo, ou se definires `ADMIN_REQUIRE_2FA=1`. A primeira vez (ainda sem senha do admin) entras na conta normal e `/admin` leva-te a criar a senha.
 4. **Bloqueio automático**: o cofre fecha após 15 min sem actividade e nunca fica aberto mais de 2 h; botão "Bloquear agora". 5 falhas em 15 min bloqueiam 15 min; 10 falhas em 24 h bloqueiam 1 h. Cada tentativa (boa ou má) fica no registo de auditoria.
 
 Opcional: `ADMIN_ALLOWED_IPS=1.2.3.4,5.6.7.8` restringe a administração a esses IPs (cuidado com IPs dinâmicos/dados móveis). Com SMTP configurado, cada abertura do cofre envia um aviso por email.

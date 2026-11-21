@@ -17,7 +17,7 @@ export async function getClientIp() {
 export async function createSession(userId: string, activeOrganizationId?: string | null) {
   const token = randomBytes(32).toString("base64url");
   const headerStore = await headers();
-  await prisma.session.create({
+  const created = await prisma.session.create({
     data: {
       userId,
       tokenHash: hashSessionToken(token),
@@ -32,6 +32,7 @@ export async function createSession(userId: string, activeOrganizationId?: strin
     httpOnly: true, secure: process.env.NODE_ENV === "production",
     sameSite: "lax", path: "/", expires: new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000),
   });
+  return created.id;
 }
 
 export async function getCurrentSession() {
