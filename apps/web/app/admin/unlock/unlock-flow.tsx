@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, ShieldCheck, Smartphone } from "lucide-react";
 import { qrMatrix } from "@/lib/agt/qr-encode";
@@ -22,6 +22,10 @@ export default function UnlockFlow({ loggedIn, email, twoFactorEnabled, twoFacto
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [mail, setMail] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [token, setToken] = useState("");
+  // O token vem no fragmento (#setup=...): nunca chega ao servidor nem aos registos.
+  useEffect(() => { const m = /[#&]setup=([A-Za-z0-9_-]{20,200})/.exec(window.location.hash); if (m) { setToken(m[1]); history.replaceState(null, "", window.location.pathname); } }, []);
   const [needsCode, setNeedsCode] = useState(false);
   const [password, setPassword] = useState(""); const [confirm, setConfirm] = useState(""); const [code, setCode] = useState("");
   const [secret, setSecret] = useState<{ secret: string; url: string } | null>(null);
@@ -47,14 +51,21 @@ export default function UnlockFlow({ loggedIn, email, twoFactorEnabled, twoFacto
         <div className="flex flex-col items-center gap-3"><QrSvg text={secret.url} /><p className="text-center text-[11px] text-slate-400">Lê o QR na aplicação. Se não conseguires, escreve esta chave: <span className="break-all font-mono text-slate-200">{secret.secret}</span></p></div>
         <label className="block text-xs text-slate-400">Código de 6 dígitos da aplicação<input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" className={input} /></label>
         <button className={primary} disabled={busy || code.length !== 6}>Confirmar e activar 2FA</button></form>;
+  } else if (!loggedIn && !hasPassword && token) {
+    title = "Primeiro acesso — cria a tua senha"; intro = "Escreve o teu email de administrador e escolhe a senha do admin (mínimo 14 caracteres ou uma frase longa). Este link só funciona uma vez. Depois, para entrares, bastam este email e esta senha.";
+    body = <form onSubmit={async (e) => { e.preventDefault(); const r = await post("/api/admin/vault/claim", { token, email: mail, password, confirm: confirmPw }); if (r) { router.replace("/admin"); router.refresh(); } }} className="space-y-4">
+      <label className="block text-xs text-slate-400">O teu email de administrador<input type="email" autoComplete="username" value={mail} onChange={(e) => setMail(e.target.value)} autoFocus className={input} /></label>
+      <label className="block text-xs text-slate-400">Cria a senha do admin<input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} /></label>
+      <label className="block text-xs text-slate-400">Repete a senha<input type="password" autoComplete="new-password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className={input} /></label>
+      <button className={primary} disabled={busy || !mail || !password || !confirmPw}>Criar senha e entrar</button></form>;
   } else if (!loggedIn) {
-    title = "Administração"; intro = hasPassword ? "Entra com o teu email e a senha do admin." : "Ainda não há senha do admin. Entra primeiro na tua conta normal e depois abre /admin para a criar.";
+    title = "Administração"; intro = hasPassword ? "Entra com o teu email e a senha do admin." : "Ainda não há senha do admin. Abre o link de primeiro acesso que recebeste.";
     body = hasPassword ? <form onSubmit={async (e) => { e.preventDefault(); const r = await post("/api/admin/vault/login", { email: mail, password, code }); if (r) { router.replace("/admin"); router.refresh(); } }} className="space-y-4">
       <label className="block text-xs text-slate-400">Email<input type="email" autoComplete="username" value={mail} onChange={(e) => setMail(e.target.value)} autoFocus className={input} /></label>
       <label className="block text-xs text-slate-400">Senha do admin<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} /></label>
       {needsCode && <label className="block text-xs text-slate-400">Código de autenticação<input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" className={input} /></label>}
       <button className={primary} disabled={busy || !mail || !password}>Entrar</button></form>
-      : <a href="/login" className={primary + " block text-center"}>Ir para o início de sessão</a>;
+      : <p className="rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-slate-400">Sem o link de primeiro acesso não é possível criar a senha. Pede um novo link.</p>;
   } else if (!hasPassword) {
     title = "Cria a senha do admin"; intro = "Escolhe uma senha ou frase só tua, diferente da senha da tua conta. Depois, para entrares aqui, bastam o teu email e esta senha. Guarda-a num sítio seguro: não há forma de a recuperar sem acesso à base de dados.";
     body = <form onSubmit={async (e) => { e.preventDefault(); if (await post("/api/admin/vault/setup", { password, confirm, code })) router.replace("/admin"); }} className="space-y-4">

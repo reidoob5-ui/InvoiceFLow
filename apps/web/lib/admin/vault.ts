@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { audit, createSession, getClientIp, getCurrentSession } from "@/lib/auth/session";
@@ -152,5 +153,47 @@ export async function attemptAdminLogin(input: { email: string; password: string
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now } });
   await audit({ action: "admin.login", userId: user.id });
   void alertAdmin(user.email, ip);
+  return { kind: "ok" };
+}
+
+const SETUP_KEY = "admin_setup_token";
+
+export type ClaimResult = { kind: "ok" } | { kind: "error"; message: string; status: number };
+
+/**
+ * Primeiro acesso por link de uso único (sem precisar da senha da conta): o token (guardado só como hash, com validade)
+ * é criado por quem gere o servidor. Quem o tiver escolhe o email de administrador e a sua senha do admin.
+ * O token é apagado ao ser usado.
+ */
+export async function claimAdminAccess(input: { token: string; email: string; password: string }): Promise<ClaimResult> {
+  const generic: ClaimResult = { kind: "error", message: "Link inválido ou expirado.", status: 401 };
+  const ip = await getClientIp();
+  const email = input.email.trim().toLowerCase();
+  const user = email ? await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, status: true, isPlatformAdmin: true, passwordHash: true } }) : null;
+  if (lockoutRemainingMs(await failures(user?.id ?? null, ip)) > 0) return { kind: "error", message: "Demasiadas tentativas. Tenta mais tarde.", status: 429 };
+  const row = await prisma.platformSetting.findUnique({ where: { key: SETUP_KEY } });
+  const [hashHex, expiresRaw] = (row?.value ?? "").split("|");
+  const given = createHash("sha256").update(input.token).digest();
+  const stored = hashHex && /^[0-9a-f]{64}$/.test(hashHex) ? Buffer.from(hashHex, "hex") : Buffer.alloc(32);
+  const tokenOk = !!row && timingSafeEqual(given, stored) && Number(expiresRaw) > Date.now();
+  const isAdmin = !!user && user.status === "ACTIVE" && user.isPlatformAdmin && ipAllowed(ip, process.env.ADMIN_ALLOWED_IPS);
+  if (!tokenOk || !isAdmin || !user) {
+    await audit({ action: "admin.unlock_failed", userId: user?.id ?? null, metadata: { reason: "claim" } });
+    return generic;
+  }
+  if ((await getAdminHash()).source === "env") return { kind: "error", message: "A senha do admin está definida na Vercel (ADMIN_ACCESS_HASH).", status: 409 };
+  const issues = adminPasswordIssues(input.password, user.email);
+  if (issues.length) return { kind: "error", message: issues.map((i) => ISSUE_TEXT[i]).join(" "), status: 422 };
+  if (user.passwordHash && (await verifyPassword(input.password, user.passwordHash))) return { kind: "error", message: "A senha do admin tem de ser diferente da senha da tua conta.", status: 422 };
+  const value = await hashPassword(input.password);
+  // Consome o token e grava a senha de forma atómica: o link só funciona uma vez.
+  const consumed = await prisma.platformSetting.deleteMany({ where: { key: SETUP_KEY, value: row!.value } });
+  if (consumed.count !== 1) return generic;
+  await prisma.platformSetting.upsert({ where: { key: KEY }, update: { value }, create: { key: KEY, value } });
+  const membership = await prisma.membership.findFirst({ where: { userId: user.id, status: "ACTIVE", organization: { status: "ACTIVE" } }, orderBy: { createdAt: "asc" }, select: { organizationId: true } });
+  const sessionId = await createSession(user.id, membership?.organizationId);
+  const now = new Date();
+  await prisma.session.update({ where: { id: sessionId }, data: { adminUnlockedAt: now, adminLastSeenAt: now } });
+  await audit({ action: "admin.password_set", userId: user.id, metadata: { via: "setup_link" } });
   return { kind: "ok" };
 }
