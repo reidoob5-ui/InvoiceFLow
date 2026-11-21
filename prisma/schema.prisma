@@ -919,6 +919,14 @@ model PlatformInvoice {
   billingInterval BillingInterval @default(MONTHLY)
   provider       String?
   providerRef    String?
+  /// Pagamento manual (IBAN / Multicaixa Express): código que o cliente cita no WhatsApp.
+  reference      String?               @unique
+  method         String?
+  claimedAt      DateTime?
+  customerNote   String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewNote     String?
   targetPlan     Plan?                 @relation("PlatformInvoiceTargetPlan", fields: [targetPlanId], references: [id], onDelete: SetNull)
   organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   subscription   Subscription?         @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
@@ -926,6 +934,13 @@ model PlatformInvoice {
 
   @@index([organizationId, createdAt])
   @@index([provider, providerRef])
+}
+
+/// Definições da plataforma editáveis no painel admin (IBAN, número Express, WhatsApp do administrador).
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model ProviderWebhookEvent {

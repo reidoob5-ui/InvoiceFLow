@@ -47,7 +47,7 @@ describe("API route guards", () => {
   it("finds the API routes", () => expect(routes.length).toBeGreaterThan(40));
 
   it("every route authenticates unless it is a documented public/system endpoint", () => {
-    const offenders = routes.filter((r) => !r.source.includes("getCurrentSession") && !(r.path in NO_SESSION)).map((r) => r.path);
+    const offenders = routes.filter((r) => !r.source.includes("getCurrentSession") && !r.source.includes("requirePlatformAdmin") && !(r.path in NO_SESSION)).map((r) => r.path);
     expect(offenders).toEqual([]);
   });
 
@@ -70,6 +70,17 @@ describe("API route guards", () => {
     for (const list of [NO_SESSION, NO_ROLE_CHECK, NO_ORG_SCOPE]) {
       for (const key of Object.keys(list)) expect(paths.has(key), `exception for a route that no longer exists: ${key}`).toBe(true);
     }
+  });
+
+  it("every /admin route is restricted to platform administrators", () => {
+    const admin = routes.filter((r) => r.path.startsWith("admin/"));
+    expect(admin.length).toBeGreaterThan(2);
+    expect(admin.filter((r) => !r.source.includes("requirePlatformAdmin") || r.source.includes("getCurrentSession")).map((r) => r.path)).toEqual([]);
+  });
+
+  it("manual payment confirmation is reachable only from admin routes", () => {
+    const callers = routes.filter((r) => /confirmManualPayment\(/.test(r.source)).map((r) => r.path);
+    expect(callers).toEqual(["admin/billing/payments/[id]"]);
   });
 
   it("no route trusts an organization id sent by the browser", () => {
