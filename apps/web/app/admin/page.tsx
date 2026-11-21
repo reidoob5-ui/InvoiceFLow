@@ -98,7 +98,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     {tab === "pagamentos" && <PaymentQueue rows={pending} />}
     {tab === "subscricoes" && <SubscriptionsTable rows={subRows} plans={plans} />}
     {tab === "historico" && <HistoryTable rows={history} />}
-    {tab === "definicoes" && <SettingsForm initial={{ pay_bank: settings.pay_bank, pay_holder: settings.pay_holder, pay_iban: settings.pay_iban, pay_express: settings.pay_express, admin_whatsapp: settings.admin_whatsapp, pay_note: settings.pay_note }} />}
+    {tab === "definicoes" && <SettingsForm initial={{ pay_bank: settings.pay_bank, pay_holder: settings.pay_holder, pay_iban: settings.pay_iban, pay_bank2: settings.pay_bank2, pay_iban2: settings.pay_iban2, pay_express: settings.pay_express, admin_whatsapp: settings.admin_whatsapp, pay_note: settings.pay_note }} />}
     {tab === "resumo" && <>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{kpis.map(k => <div key={k.label} className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-[11px] text-slate-500">{k.label}</p><p className="mt-2 text-xl font-semibold tracking-tight">{k.value}</p><p className="mt-1 text-[10px] text-slate-500">{k.hint}</p></div>)}</div>
     <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">

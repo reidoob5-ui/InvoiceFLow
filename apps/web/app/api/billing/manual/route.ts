@@ -32,7 +32,7 @@ export async function GET() {
       select: { key: true, name: true, monthlyPrice: true, yearlyPrice: true } }),
   ]);
   return NextResponse.json({
-    settings: { bank: settings.pay_bank, holder: settings.pay_holder, iban: settings.pay_iban, express: settings.pay_express, note: settings.pay_note, whatsappConfigured: !!settings.admin_whatsapp },
+    settings: { bank: settings.pay_bank, holder: settings.pay_holder, iban: settings.pay_iban, bank2: settings.pay_bank2, iban2: settings.pay_iban2, express: settings.pay_express, note: settings.pay_note, whatsappConfigured: !!settings.admin_whatsapp },
     plans: plans.map((p) => ({ key: p.key, name: p.name, monthly: Number(p.monthlyPrice), yearly: Number(p.yearlyPrice) })),
     payments: rows.map((r) => ({
       id: r.id, reference: r.reference, status: r.status, amount: r.amount.toString(), interval: r.billingInterval, plan: r.targetPlan?.name ?? "",

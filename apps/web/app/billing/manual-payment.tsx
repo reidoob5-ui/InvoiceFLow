@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Banknote, Check, Clock, Copy, MessageCircle, X } from "lucide-react";
 
 type Payment = { id: string; reference: string; status: "OPEN" | "PAID" | "VOID"; amount: string; interval: string; plan: string; createdAt: string; claimedAt: string | null; paidAt: string | null; periodEnd: string | null; reviewNote: string | null; whatsapp: string | null };
-type Data = { settings: { bank: string; holder: string; iban: string; express: string; note: string; whatsappConfigured: boolean }; plans: { key: string; name: string; monthly: number; yearly: number }[]; payments: Payment[] };
+type Data = { settings: { bank: string; holder: string; iban: string; bank2: string; iban2: string; express: string; note: string; whatsappConfigured: boolean }; plans: { key: string; name: string; monthly: number; yearly: number }[]; payments: Payment[] };
 
 const kz = (v: number | string) => new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(v));
 const day = (v: string | null) => (v ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium" }).format(new Date(v)) : "—");
@@ -51,7 +51,7 @@ export default function ManualPayment() {
   if (forbidden || !data) return null;
   const open = data.payments.find((p) => p.status === "OPEN");
   const history = data.payments.filter((p) => p.status !== "OPEN");
-  const hasDetails = !!(data.settings.iban || data.settings.express);
+  const hasDetails = !!(data.settings.iban || data.settings.iban2 || data.settings.express);
   const chosen = data.plans.find((p) => p.key === planKey);
 
   return <section className="rounded-2xl border border-emerald-300/20 bg-gradient-to-br from-emerald-500/10 to-white/[.02] p-5 sm:p-6">
@@ -77,7 +77,8 @@ export default function ManualPayment() {
         <div className="text-right"><p className="text-sm text-slate-300">{open.plan} · {open.interval === "YEARLY" ? "anual" : "mensal"}</p><p className="text-lg font-semibold text-white">{kz(open.amount)}</p></div>
       </div>
       {hasDetails ? <div className="grid gap-2 sm:grid-cols-2">
-        <CopyRow label={data.settings.bank ? `IBAN — ${data.settings.bank}` : "IBAN"} value={data.settings.iban} />
+        <CopyRow label={data.settings.bank ? `IBAN / NIB — ${data.settings.bank}` : "IBAN / NIB"} value={data.settings.iban} />
+        <CopyRow label={data.settings.bank2 ? `IBAN / NIB — ${data.settings.bank2}` : "IBAN / NIB (2.ª conta)"} value={data.settings.iban2} />
         <CopyRow label="Titular" value={data.settings.holder} />
         <CopyRow label="Multicaixa Express" value={data.settings.express} />
         <CopyRow label="Valor" value={kz(open.amount)} />

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { addPeriod } from "@/lib/billing/pure";
 export { addPeriod, newReference, whatsappLink, classifySubscription, type PayState } from "@/lib/billing/pure";
 
-export const SETTING_KEYS = ["pay_bank", "pay_holder", "pay_iban", "pay_express", "admin_whatsapp", "pay_note"] as const;
+export const SETTING_KEYS = ["pay_bank", "pay_holder", "pay_iban", "pay_bank2", "pay_iban2", "pay_express", "admin_whatsapp", "pay_note"] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 export type PaySettings = Record<SettingKey, string>;
 

@@ -7,7 +7,7 @@ import { Check, MessageCircle, Search, X } from "lucide-react";
 export type PendingRow = { id: string; reference: string; org: string; owner: string; ownerEmail: string; phone: string; plan: string; interval: string; amount: string; createdAt: string; claimedAt: string | null; note: string | null; whatsapp: string | null };
 export type HistoryRow = { id: string; reference: string; org: string; plan: string; amount: string; status: "PAID" | "VOID"; at: string; periodEnd: string | null; note: string | null };
 export type SubRow = { orgId: string; org: string; owner: string; ownerEmail: string; phone: string; plan: string; planKey: string; state: string; periodEnd: string | null; trialEndsAt: string | null; lastPaidAt: string | null; pending: boolean; createdAt: string };
-export type Settings = Record<"pay_bank" | "pay_holder" | "pay_iban" | "pay_express" | "admin_whatsapp" | "pay_note", string>;
+export type Settings = Record<"pay_bank" | "pay_holder" | "pay_iban" | "pay_bank2" | "pay_iban2" | "pay_express" | "admin_whatsapp" | "pay_note", string>;
 
 const kz = (v: number | string) => new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(v));
 const dt = (v: string | null, time = false) => (v ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium", ...(time ? { timeStyle: "short" } : {}) }).format(new Date(v)) : "—");
@@ -130,7 +130,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   return <form onSubmit={async (e) => { e.preventDefault(); setSaved(await run("s", "/api/admin/billing/settings", "PUT", v)); }} className="max-w-2xl space-y-4 rounded-2xl border border-white/10 bg-white/[.025] p-5">
     <p className="text-xs text-slate-400">Estes dados aparecem ao cliente quando ele gera uma referência de pagamento. O número de WhatsApp é onde recebes os comprovativos.</p>
     <div className="grid gap-3 sm:grid-cols-2">{field("admin_whatsapp", "O teu WhatsApp (formato internacional)", "244923000000")}{field("pay_express", "Multicaixa Express (número)", "923 000 000")}{field("pay_bank", "Banco", "BAI")}{field("pay_holder", "Titular da conta")}</div>
-    {field("pay_iban", "IBAN", "AO06 0000 0000 0000 0000 0000 0")}{field("pay_note", "Nota para o cliente (opcional)")}
+    {field("pay_iban", "IBAN / NIB do 1.º banco", "0000 0000 00000000000 00")}<div className="grid gap-3 sm:grid-cols-2">{field("pay_bank2", "2.º banco (opcional)")}{field("pay_iban2", "IBAN / NIB do 2.º banco")}</div>{field("pay_note", "Nota para o cliente (opcional)")}
     {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
     <div className="flex items-center gap-3"><button disabled={!!busy} className="rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "A guardar…" : "Guardar"}</button>{saved && <span className="text-xs text-emerald-300">Guardado.</span>}</div>
   </form>;
